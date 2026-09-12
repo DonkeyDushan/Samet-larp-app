@@ -59,7 +59,7 @@ const SEPARATOR = /[,;]/
 /** `S_<Postava>_<Skala>` — the scale part may itself contain `_` (`Wealth_osobni`). */
 const IMPACT = /^S_([^_\s]+)_(.+?)\s*(=|\+|-)\s*(.+)$/
 
-export function parseScaleImpact(cell: string | undefined | null): ScaleImpactParse {
+export const parseScaleImpact = (cell: string | undefined | null): ScaleImpactParse => {
   const impacts: ScaleImpact[] = []
   const problems: ScaleImpactProblem[] = []
 
@@ -123,7 +123,7 @@ export function parseScaleImpact(cell: string | undefined | null): ScaleImpactPa
 }
 
 /** Says what is wrong rather than just "invalid", so the author can fix it blind. */
-function describeFailure(raw: string): ScaleImpactProblem {
+const describeFailure = (raw: string): ScaleImpactProblem => {
   if (!raw.startsWith('S_')) {
     return {
       raw,
@@ -145,15 +145,17 @@ function describeFailure(raw: string): ScaleImpactProblem {
       detail: 'ID škály má tvar `S_<Postava>_<Skala>`, chybí část se jménem škály',
     }
   }
+
   return { raw, reason: 'nezname', detail: 'nedá se přečíst jako dopad na škálu' }
 }
 
 /** Splits `S_Marie_Wealth_osobni` into its parts; undefined when it is not a scale ID. */
-export function splitScaleId(
+export const splitScaleId = (
   externalId: string,
-): { character: string; scale: string } | undefined {
+): { character: string; scale: string } | undefined => {
   const match = /^S_([^_\s]+)_(.+)$/.exec(externalId.trim())
   if (!match) return undefined
+
   return { character: match[1] ?? '', scale: match[2] ?? '' }
 }
 
@@ -162,8 +164,9 @@ export function splitScaleId(
  * half and never the other is almost certainly a typo in a scale ID, which is
  * why it is worth a warning of its own.
  */
-export function accountCounterpart(scaleKey: string): string | undefined {
+export const accountCounterpart = (scaleKey: string): string | undefined => {
   if (scaleKey.endsWith('_osobni')) return `${scaleKey.slice(0, -'_osobni'.length)}_spolecny`
   if (scaleKey.endsWith('_spolecny')) return `${scaleKey.slice(0, -'_spolecny'.length)}_osobni`
+
   return undefined
 }

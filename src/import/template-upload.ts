@@ -6,8 +6,9 @@
  * with every import, so the screen has to show which character still has none.
  */
 import JSZip from 'jszip'
-import { parseTemplate, templateIdFromFilename } from './template'
-import type { ParsedConfig, ParsedTemplate } from './types'
+import { toParsedTemplate } from './template'
+import type { ParsedConfig } from './types/parsed-config'
+import type { ParsedTemplate, UploadedTemplate } from './types/parsed-template'
 
 export interface RawFile {
   filename: string
@@ -16,8 +17,8 @@ export interface RawFile {
 }
 
 /** Reads `.md` files, unpacking any zip among them. */
-export async function readTemplateFiles(files: RawFile[]): Promise<ParsedTemplate[]> {
-  const collected: { filename: string; markdown: string }[] = []
+export const readTemplateFiles = async (files: RawFile[]): Promise<ParsedTemplate[]> => {
+  const collected: UploadedTemplate[] = []
 
   for (const file of files) {
     if (/\.zip$/i.test(file.filename)) {
@@ -31,9 +32,9 @@ export async function readTemplateFiles(files: RawFile[]): Promise<ParsedTemplat
   return collected.map(toParsedTemplate)
 }
 
-async function readZip(data: ArrayBuffer | Uint8Array): Promise<{ filename: string; markdown: string }[]> {
+const readZip = async (data: ArrayBuffer | Uint8Array): Promise<UploadedTemplate[]> => {
   const zip = await JSZip.loadAsync(data)
-  const out: { filename: string; markdown: string }[] = []
+  const out: UploadedTemplate[] = []
 
   for (const entry of Object.values(zip.files)) {
     if (entry.dir) continue
@@ -46,27 +47,10 @@ async function readZip(data: ArrayBuffer | Uint8Array): Promise<{ filename: stri
   return out
 }
 
-function decodeUtf8(data: ArrayBuffer | Uint8Array): string {
+const decodeUtf8 = (data: ArrayBuffer | Uint8Array): string => {
   return new TextDecoder('utf-8').decode(data instanceof Uint8Array ? data : new Uint8Array(data))
 }
 
-function toParsedTemplate({
-  filename,
-  markdown,
-}: {
-  filename: string
-  markdown: string
-}): ParsedTemplate {
-  const parsed = parseTemplate(markdown)
-  return {
-    externalId: templateIdFromFilename(filename),
-    filename,
-    markdown,
-    blockIds: parsed.blockIds,
-    variables: parsed.variables,
-    problems: parsed.problems,
-  }
-}
 
 export interface TemplateAssignment {
   characterExternalId: string
@@ -93,10 +77,10 @@ export interface TemplateCoverage {
  * A file matches either by its template ID (`T_Marie.md`) or by the character's
  * own ID (`marie.md`) — the author names the export after whichever is at hand.
  */
-export function templateCoverage(
+export const templateCoverage = (
   config: ParsedConfig,
   templates: ParsedTemplate[],
-): TemplateCoverage {
+): TemplateCoverage => {
   const byId = new Map<string, ParsedTemplate>()
   for (const template of templates) {
     byId.set(template.externalId.toLowerCase(), template)

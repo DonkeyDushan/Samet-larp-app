@@ -301,7 +301,7 @@ přesně ten nedeterminismus, kterému se vyhýbáme.
 Uvnitř fází 3 i 4 se jede **podle priority sestupně**.
 
 Rozdělení efektů do fází je v datech (`STRUCTURAL_EFFECT_KINDS`,
-`VALUE_EFFECT_KINDS` v `src/engine/types.ts`), aby ho implementace `evaluate`
+`VALUE_EFFECT_KINDS` v `src/engine/constants/effectPhases.ts`), aby ho implementace `evaluate`
 nešla omylem obejít.
 
 ## Import konfigurace a validace (§10.2, §11)

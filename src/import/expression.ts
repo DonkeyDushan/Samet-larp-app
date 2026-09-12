@@ -43,10 +43,11 @@ export interface ExpressionParse {
 }
 
 /** ID prefixes from §4.2; anything else is reported rather than guessed at. */
-function classify(name: string): ReferenceKind {
+const classify = (name: string): ReferenceKind => {
   if (name.startsWith('A_')) return 'odpoved'
   if (name.startsWith('S_')) return 'skala'
   if (name.startsWith('F_')) return 'priznak'
+
   return 'neznamy'
 }
 
@@ -54,13 +55,19 @@ function classify(name: string): ReferenceKind {
  * `=` is the author's equality operator (§4.5) but jsep only knows `==`.
  * Rewrites a lone `=` and leaves `<=`, `>=`, `!=` and `==` alone.
  */
-function normalizeEquals(source: string): string {
+const normalizeEquals = (source: string): string => {
   return source.replace(/(^|[^<>=!])=(?!=)/g, '$1==')
 }
 
-const CALL_WHITELIST = new Set(['RANDOM'])
+/** The only function a condition may call (§4.5). */
+const CALL_WHITELIST = Object.freeze(new Set(['RANDOM']))
 
-export function parseCondition(cell: string | undefined | null): ExpressionParse {
+/** `RANDOM(n)` takes a probability in percent. */
+const RANDOM_MIN_PERCENT = 0
+
+const RANDOM_MAX_PERCENT = 100
+
+export const parseCondition = (cell: string | undefined | null): ExpressionParse => {
   const raw = (cell ?? '').trim()
 
   if (raw === '') {
@@ -105,12 +112,14 @@ export function parseCondition(cell: string | undefined | null): ExpressionParse
           // `DEFAULT` inside a bigger expression is meaningless — it is always
           // true, so the rest of the expression could never change the outcome.
           error ??= '`DEFAULT` smí stát jen samostatně, ne uvnitř výrazu'
+
           return
         }
         if (!seen.has(name)) {
           seen.add(name)
           references.push({ name, kind: classify(name) })
         }
+
         return
       }
       case 'CallExpression': {
@@ -118,38 +127,45 @@ export function parseCondition(cell: string | undefined | null): ExpressionParse
         const callee = call.callee.type === 'Identifier' ? String((call.callee as jsep.Identifier).name) : '?'
         if (!CALL_WHITELIST.has(callee)) {
           error ??= `neznámá funkce \`${callee}\` — k dispozici je jen \`RANDOM(<procenta>)\``
+
           return
         }
         usesRandom = true
         const [probability, ...extra] = call.arguments
         if (probability === undefined || extra.length > 0) {
           error ??= '`RANDOM` bere právě jeden argument, pravděpodobnost v procentech'
+
           return
         }
         if (probability.type !== 'Literal' || typeof (probability as jsep.Literal).value !== 'number') {
           error ??= '`RANDOM` bere číslo v procentech, například `RANDOM(50)`'
+
           return
         }
         const value = (probability as jsep.Literal).value as number
-        if (value < 0 || value > 100) {
-          error ??= `\`RANDOM(${value})\` je mimo rozsah — pravděpodobnost je 0 až 100 procent`
+        if (value < RANDOM_MIN_PERCENT || value > RANDOM_MAX_PERCENT) {
+          error ??= `\`RANDOM(${value})\` je mimo rozsah — pravděpodobnost je ${RANDOM_MIN_PERCENT} až ${RANDOM_MAX_PERCENT} procent`
         }
+
         return
       }
       case 'BinaryExpression': {
         const binary = node as jsep.BinaryExpression
         visit(binary.left)
         visit(binary.right)
+
         return
       }
       case 'UnaryExpression': {
         visit((node as jsep.UnaryExpression).argument)
+
         return
       }
       case 'Compound': {
         // jsep produces a Compound for two expressions with nothing joining
         // them — almost always a missing AND / OR.
         error ??= 'dva výrazy za sebou bez spojky — chybí `AND` nebo `OR`'
+
         return
       }
       case 'Literal':
@@ -164,6 +180,7 @@ export function parseCondition(cell: string | undefined | null): ExpressionParse
   if (error) {
     return { raw, isDefault: false, ok: false, error, references, usesRandom, tree }
   }
+
   return { raw, isDefault: false, ok: true, references, usesRandom, tree }
 }
 
@@ -172,7 +189,7 @@ export function parseCondition(cell: string | undefined | null): ExpressionParse
  * An unbalanced parenthesis is the common case and worth naming outright — the
  * sample sheet already contains one.
  */
-function describeSyntaxError(raw: string, cause: unknown): string {
+const describeSyntaxError = (raw: string, cause: unknown): string => {
   const open = (raw.match(/\(/g) ?? []).length
   const close = (raw.match(/\)/g) ?? []).length
   if (open > close) {
@@ -182,5 +199,6 @@ function describeSyntaxError(raw: string, cause: unknown): string {
     return `přebývá ${close - open}× uzavírací závorka )`
   }
   const detail = cause instanceof Error ? cause.message : String(cause)
+
   return `výraz se nedá přečíst: ${detail}`
 }

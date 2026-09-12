@@ -13,7 +13,7 @@
  */
 
 /** Lowercases and strips diacritics, so `Věra` and `vera` compare equal. */
-export function fold(value: string): string {
+export const fold = (value: string): string => {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()
 }
 
@@ -24,9 +24,9 @@ export interface CharacterAliases {
   byAlias: Map<string, string>
 }
 
-export function buildAliases(
+export const buildAliases = (
   characters: { externalId: string; firstName: string; lastName: string }[],
-): CharacterAliases {
+): CharacterAliases => {
   const ids = new Set(characters.map((c) => c.externalId))
   const counts = new Map<string, Set<string>>()
 
@@ -50,7 +50,8 @@ export function buildAliases(
   for (const [alias, owners] of counts) {
     // An ambiguous alias (two characters named Marie) resolves to nothing;
     // guessing would silently attach a question to the wrong character.
-    if (owners.size === 1) byAlias.set(alias, [...owners][0]!)
+    const [only] = owners
+    if (owners.size === 1 && only !== undefined) byAlias.set(alias, only)
   }
 
   return { ids, byAlias }
@@ -61,12 +62,13 @@ export type CharacterResolution =
   | { status: 'podle_jmena'; id: string }
   | { status: 'neznama' }
 
-export function resolveCharacter(
+export const resolveCharacter = (
   value: string,
   aliases: CharacterAliases,
-): CharacterResolution {
+): CharacterResolution => {
   if (value === '') return { status: 'neznama' }
   if (aliases.ids.has(value)) return { status: 'presna', id: value }
   const id = aliases.byAlias.get(fold(value))
+
   return id === undefined ? { status: 'neznama' } : { status: 'podle_jmena', id }
 }

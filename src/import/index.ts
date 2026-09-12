@@ -1,92 +1,23 @@
-/**
- * Config import (§10.2): from an uploaded file to a checked `ParsedConfig`.
- *
- * Parsing and validating never touch the database and never throw, so the whole
- * path is testable on fixtures. Writing to the database is a separate step that
- * runs only when there is no error.
- */
-import { IssueCollector, type Issue } from './issues'
-import { parseConfig, unknownSheets, type Workbook } from './parse-config'
-import { parseTemplate, templateIdFromFilename } from './template'
-import { validateConfig } from './validate'
-import { readWorkbook, workbookFromCsvFiles } from './workbook'
-import type { ParsedConfig, ParsedTemplate } from './types'
-
-export interface ImportResult {
-  config: ParsedConfig
-  templates: ParsedTemplate[]
-  issues: Issue[]
-  errors: Issue[]
-  warnings: Issue[]
-  /** False when any error was found: the config must not be used (§10.2). */
-  usable: boolean
-  /** Sheets the import did not recognise, worth mentioning rather than failing on. */
-  ignoredSheets: string[]
-}
-
-export interface UploadedTemplate {
-  filename: string
-  markdown: string
-}
-
-/** Parses and validates a workbook that is already in memory. */
-export function importWorkbook(
-  workbook: Workbook,
-  uploadedTemplates: UploadedTemplate[] = [],
-): ImportResult {
-  const issues = new IssueCollector()
-  const config = parseConfig(workbook, issues)
-  const templates = uploadedTemplates.map(toParsedTemplate)
-
-  validateConfig(
-    { config, templates: uploadedTemplates.length > 0 ? templates : undefined },
-    issues,
-  )
-
-  return {
-    config,
-    templates,
-    issues: [...issues.all],
-    errors: [...issues.errors],
-    warnings: [...issues.warnings],
-    usable: !issues.hasErrors,
-    ignoredSheets: unknownSheets(workbook),
-  }
-}
-
-/** The primary path: one `.xlsx` with every sheet. */
-export function importXlsx(
-  data: ArrayBuffer | Uint8Array,
-  templates: UploadedTemplate[] = [],
-): ImportResult {
-  return importWorkbook(readWorkbook(data), templates)
-}
-
-/** The fallback path: one `.csv` per sheet. */
-export function importCsvFiles(
-  files: { filename: string; text: string }[],
-  templates: UploadedTemplate[] = [],
-): ImportResult {
-  return importWorkbook(workbookFromCsvFiles(files), templates)
-}
-
-function toParsedTemplate({ filename, markdown }: UploadedTemplate): ParsedTemplate {
-  const parsed = parseTemplate(markdown)
-  return {
-    externalId: templateIdFromFilename(filename),
-    filename,
-    markdown,
-    blockIds: parsed.blockIds,
-    variables: parsed.variables,
-    problems: parsed.problems,
-  }
-}
-
-export * from './issues'
-export * from './types'
+/** Config import (§10.2) — public surface for the rest of the app. */
+export { importWorkbook, importXlsx, importCsvFiles } from './import-config'
+export { IssueCollector } from './issue-collector'
+export { newestSnapshot, persistConfig, type PersistInput, type PersistResult } from './persist/persist-config'
+export { activateConfigVersion } from './persist/activate-config-version'
+export { parseConfig, unknownSheets } from './parse/parse-config'
+export { validateConfig, type ValidationInput } from './validate/validate-config'
+export { configSnapshot, diffConfigs, diffSnapshots, type ConfigDiff, type DiffEntry, type EntityKind, type EntitySnapshot } from './diff'
+export { readTemplateFiles, templateCoverage, type RawFile, type TemplateAssignment, type TemplateCoverage } from './template-upload'
 export { parseScaleImpact, splitScaleId, accountCounterpart } from './scale-impact'
 export { parseCondition, DEFAULT_CONDITION } from './expression'
 export { parseTemplate, templateIdFromFilename, KNOWN_VARIABLES } from './template'
 export { readWorkbook, workbookFromCsvFiles, sheetNameFromFilename } from './workbook'
-export { parseConfig, unknownSheets, type Workbook } from './parse-config'
-export { validateConfig } from './validate'
+export { columnLetter } from './utils/column-letter'
+export { editDistance, suggestClosest } from './utils/suggest-closest'
+export type { Issue, IssueCode, IssueLocation, IssueSeverity } from './types/issue'
+export type { ImportResult } from './types/import-result'
+export type { ImportRepairs, ParsedConfig, Workbook } from './types/parsed-config'
+export type { ParsedCharacter } from './types/parsed-character'
+export type { ParsedBand, ParsedScale } from './types/parsed-scale'
+export type { ParsedAnswerEffect, ParsedAnswerOption, ParsedQuestion } from './types/parsed-question'
+export type { ParsedBlock, ParsedVariation } from './types/parsed-block'
+export type { ParsedTemplate, UploadedTemplate } from './types/parsed-template'

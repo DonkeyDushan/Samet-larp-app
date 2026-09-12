@@ -1,0 +1,35 @@
+/** Admin screen (§10.2). */
+export const sprava = Object.freeze({
+  title: 'Správa konfigurace',
+  noRunYet: 'Zatím není založený žádný běh. Konfiguraci jde zkontrolovat i tak, ale uložit se dá až do běhu.',
+
+  uploadTitle: 'Nahrání konfigurace',
+  uploadHintBefore: 'Stáhni Google Sheet přes ',
+  uploadHintMenu: 'Soubor → Stáhnout → Microsoft Excel',
+  uploadHintMiddle: ' a přetáhni sem jeden soubor ',
+  uploadHintFormat: '.xlsx',
+  uploadHintAfter: ' se všemi listy.',
+  configLabel: 'Konfigurace (.xlsx)',
+  templatesLabel: 'Šablony (.md nebo .zip)',
+  templatesHint: 'Nahrávají se jednou za kapitolu. Bez nich se kontroly značek v šablonách nespustí.',
+  csvFallbackSummary: 'Záložní cesta: jednotlivé .csv',
+  csvFallbackHint: 'Deset listů znamená deset souborů. Použij, jen když se .xlsx nedá stáhnout.',
+  authorHint: 'Import se zapisuje do auditu se jménem. Nutné jen pro uložení, ne pro kontrolu.',
+  noteLabel: 'Poznámka k verzi',
+  checking: 'Kontroluji…',
+  check: 'Zkontrolovat bez uložení',
+  save: 'Uložit jako novou verzi',
+
+  historyTitle: 'Historie verzí',
+  historyEmpty: 'Zatím nebyla naimportovaná žádná konfigurace.',
+  historyIntro: 'Běh počítá z aktivní verze. Nový import ji sám nepřepne — přepnutí jde do auditu (§6.5).',
+  version: (version: number) => `Verze ${version}`,
+  active: 'aktivní',
+  issueSummary: (warnings: number, errorCount: number) =>
+    `${warnings} varování${errorCount > 0 ? `, ${errorCount} chyb` : ''}`,
+  hideChecks: 'Skrýt',
+  showChecks: 'Výsledky kontrol',
+  activate: (runId: string) => `Aktivovat pro běh ${runId}`,
+  fillAuthorFirst: 'Nejdřív vyplň, kdo jsi.',
+  noFindings: 'Kontroly nic nenašly.',
+})

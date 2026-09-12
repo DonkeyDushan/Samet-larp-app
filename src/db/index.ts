@@ -7,3 +7,4 @@
  */
 export * as schema from './schema'
 export { forRun, parseRunId, RunScope, type RunId, type RunScopedTable } from './run-scope'
+export { listRuns, type RunSummary } from './runs-catalog'

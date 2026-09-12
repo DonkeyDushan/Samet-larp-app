@@ -9,9 +9,10 @@
  * No marker may survive into the finished document, so a malformed one has to
  * be caught at upload — not when the org is about to print.
  */
+import type { ParsedTemplate, UploadedTemplate } from './types/parsed-template'
 
 /** Variables the filler knows (§8.4). */
-export const KNOWN_VARIABLES = ['JMENO', 'PRIJMENI', 'VEK', 'SKUPINA'] as const
+export const KNOWN_VARIABLES = Object.freeze(['JMENO', 'PRIJMENI', 'VEK', 'SKUPINA'] as const)
 
 export interface TemplateMarker {
   kind: 'blok' | 'promenna'
@@ -39,12 +40,15 @@ export interface TemplateParse {
   variables: string[]
 }
 
+/** Keyword opening a block marker, `{BLOK <ID>}`. */
+const BLOCK_KEYWORD = 'BLOK'
+
 /** Any `{…}` group; what is inside decides whether it is valid. */
 const BRACE_GROUP = /\{([^{}]*)\}/g
 /** An opening brace with no closing one on the same line. */
 const UNCLOSED = /\{[^{}]*$/
 
-export function parseTemplate(markdown: string): TemplateParse {
+export const parseTemplate = (markdown: string): TemplateParse => {
   const markers: TemplateMarker[] = []
   const problems: TemplateMarkerProblem[] = []
   const blockIds = new Set<string>()
@@ -75,7 +79,7 @@ export function parseTemplate(markdown: string): TemplateParse {
       }
 
       if (/^BLOK\b/i.test(inner)) {
-        const id = inner.slice(4).trim()
+        const id = inner.slice(BLOCK_KEYWORD.length).trim()
         if (id === '') {
           problems.push({ line, raw, detail: 'značka `{BLOK}` bez ID bloku' })
           continue
@@ -128,7 +132,22 @@ export function parseTemplate(markdown: string): TemplateParse {
 }
 
 /** Template ID a `.md` filename maps to, matched against `Characters.Template ID`. */
-export function templateIdFromFilename(filename: string): string {
+export const templateIdFromFilename = (filename: string): string => {
   const base = filename.replace(/\.md$/i, '').split('/').pop() ?? filename
+
   return base.trim()
+}
+
+/** A template with its markers read, ready for validation. */
+export const toParsedTemplate = ({ filename, markdown }: UploadedTemplate): ParsedTemplate => {
+  const parsed = parseTemplate(markdown)
+
+  return {
+    externalId: templateIdFromFilename(filename),
+    filename,
+    markdown,
+    blockIds: parsed.blockIds,
+    variables: parsed.variables,
+    problems: parsed.problems,
+  }
 }

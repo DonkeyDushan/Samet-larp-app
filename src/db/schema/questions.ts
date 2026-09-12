@@ -10,7 +10,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { authorName, createdAt } from './_shared'
+import { authorName, createdAt } from './columns'
 import { questionSource, questionType } from './enums'
 import { characters } from './characters'
 import { scales } from './scales'

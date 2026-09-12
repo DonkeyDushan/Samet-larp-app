@@ -8,7 +8,7 @@
  * Works on two `ParsedConfig`s rather than on the database, so a diff can be
  * shown before anything is written.
  */
-import type { ParsedConfig } from './types'
+import type { ParsedConfig } from './types/parsed-config'
 
 export type EntityKind =
   | 'postava'
@@ -53,32 +53,34 @@ export interface EntitySnapshot {
 }
 
 /** Serializable snapshot of a config, stored on the version row. */
-export function configSnapshot(config: ParsedConfig): EntitySnapshot[] {
+export const configSnapshot = (config: ParsedConfig): EntitySnapshot[] => {
   return [...snapshot(config).values()]
 }
 
 const keyOf = (entity: EntitySnapshot) => `${entity.kind}:${entity.chapter ?? '-'}:${entity.id}`
 
 /** Diffs two stored snapshots — what the admin screen actually compares. */
-export function diffSnapshots(
+export const diffSnapshots = (
   previous: EntitySnapshot[] | undefined,
   next: EntitySnapshot[],
-): ConfigDiff {
+): ConfigDiff => {
   const before = new Map((previous ?? []).map((e) => [keyOf(e), e]))
   const after = new Map(next.map((e) => [keyOf(e), e]))
+
   return compare(before, after)
 }
 
-export function diffConfigs(previous: ParsedConfig | undefined, next: ParsedConfig): ConfigDiff {
+export const diffConfigs = (previous: ParsedConfig | undefined, next: ParsedConfig): ConfigDiff => {
   const before = previous ? snapshot(previous) : new Map<string, EntitySnapshot>()
   const after = snapshot(next)
+
   return compare(before, after)
 }
 
-function compare(
+const compare = (
   before: Map<string, EntitySnapshot>,
   after: Map<string, EntitySnapshot>,
-): ConfigDiff {
+): ConfigDiff => {
 
   const added: DiffEntry[] = []
   const removed: DiffEntry[] = []
@@ -111,10 +113,10 @@ function compare(
   }
 }
 
-function fieldChanges(
+const fieldChanges = (
   before: Record<string, string>,
   after: Record<string, string>,
-): { field: string; before: string; after: string }[] {
+): { field: string; before: string; after: string }[] => {
   const fields = new Set([...Object.keys(before), ...Object.keys(after)])
   const changes: { field: string; before: string; after: string }[] = []
   for (const field of fields) {
@@ -122,10 +124,11 @@ function fieldChanges(
     const to = after[field] ?? ''
     if (from !== to) changes.push({ field, before: from, after: to })
   }
+
   return changes
 }
 
-function snapshot(config: ParsedConfig): Map<string, EntitySnapshot> {
+const snapshot = (config: ParsedConfig): Map<string, EntitySnapshot> => {
   const entities = new Map<string, EntitySnapshot>()
   const put = (entity: EntitySnapshot) => {
     entities.set(keyOf(entity), entity)
@@ -230,16 +233,4 @@ function snapshot(config: ParsedConfig): Map<string, EntitySnapshot> {
   }
 
   return entities
-}
-
-/** Czech label for the UI; the diff itself stays language-neutral. */
-export const ENTITY_LABELS: Record<EntityKind, string> = {
-  postava: 'postava',
-  skupina: 'skupina',
-  skala: 'škála',
-  pasmo: 'pásmo',
-  otazka: 'otázka',
-  odpoved: 'odpověď',
-  blok: 'blok',
-  varianta: 'varianta',
 }

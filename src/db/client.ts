@@ -9,20 +9,24 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'
 
-function connectionString(): string {
+const connectionString = (): string => {
   const url = process.env.DATABASE_URL
   if (!url) {
     throw new Error('Chybí DATABASE_URL. Zkopíruj .env.example do .env a doplň připojení.')
   }
+
   return url
 }
+
+/** Internal tool used by a few orgs at once; a small pool is plenty. */
+const MAX_CONNECTIONS = 5
 
 declare global {
   var __larpSql: ReturnType<typeof postgres> | undefined
 }
 
 /** Next.js reloads modules in dev, so the connection is kept on globalThis. */
-const sql = globalThis.__larpSql ?? postgres(connectionString(), { max: 5 })
+const sql = globalThis.__larpSql ?? postgres(connectionString(), { max: MAX_CONNECTIONS })
 if (process.env.NODE_ENV !== 'production') globalThis.__larpSql = sql
 
 /**

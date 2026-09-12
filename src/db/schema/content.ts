@@ -9,7 +9,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { createdAt } from './_shared'
+import { createdAt } from './columns'
 import { characters } from './characters'
 import { chapters, configVersions, runs } from './runs'
 

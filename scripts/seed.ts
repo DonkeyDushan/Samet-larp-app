@@ -131,7 +131,7 @@ const MARIE_INITIAL: Record<string, number> = {
   Control: 3,
 }
 
-async function wipeSeedRun() {
+const wipeSeedRun = async () => {
   // Delete dependents first — the foreign keys are `restrict`.
   const order: RunScopedTable[] = [
     auditLog,
@@ -162,7 +162,7 @@ async function wipeSeedRun() {
   await unscopedDb.delete(runs).where(eq(runs.id, RUN_ID))
 }
 
-async function main() {
+const main = async () => {
   await wipeSeedRun()
 
   await unscopedDb.insert(runs).values({

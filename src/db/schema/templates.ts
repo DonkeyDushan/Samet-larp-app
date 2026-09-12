@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { authorName, createdAt } from './_shared'
+import { authorName, createdAt } from './columns'
 import { templateKind } from './enums'
 import { characters, groups } from './characters'
 import { chapters, runs } from './runs'

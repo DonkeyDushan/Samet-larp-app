@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { importXlsx } from './index'
+import { importXlsx } from './import-config'
 import { readTemplateFiles, templateCoverage } from './template-upload'
 
 const marie = () => readFileSync('documents/marie.md')

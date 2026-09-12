@@ -11,7 +11,7 @@ import { rawSql } from '../src/db/client'
 
 const dir = join(process.cwd(), 'db', 'sql')
 
-async function main() {
+const main = async () => {
   const files = readdirSync(dir)
     .filter((name) => name.endsWith('.sql'))
     .sort()

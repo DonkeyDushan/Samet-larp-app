@@ -10,10 +10,10 @@
  */
 import * as XLSX from 'xlsx'
 import type { Grid } from './sheet'
-import type { Workbook } from './parse-config'
+import type { Workbook } from './types/parsed-config'
 
 /** Reads an `.xlsx` buffer into sheet name to grid. */
-export function readWorkbook(data: ArrayBuffer | Uint8Array): Workbook {
+export const readWorkbook = (data: ArrayBuffer | Uint8Array): Workbook => {
   const workbook = XLSX.read(data, { type: 'array', raw: false })
   const sheets: Workbook = new Map()
 
@@ -36,7 +36,7 @@ export function readWorkbook(data: ArrayBuffer | Uint8Array): Workbook {
  * Reads one `.csv` as a sheet. The sheet name comes from the filename, so
  * `2_Questions.csv` lands where the xlsx path would put its `2_Questions` tab.
  */
-export function readCsvSheet(filename: string, text: string): { name: string; grid: Grid } {
+export const readCsvSheet = (filename: string, text: string): { name: string; grid: Grid } => {
   const sheet = XLSX.read(text, { type: 'string', raw: false }).Sheets['Sheet1']
   const grid = sheet
     ? (XLSX.utils.sheet_to_json<string[]>(sheet, {
@@ -46,16 +46,18 @@ export function readCsvSheet(filename: string, text: string): { name: string; gr
         blankrows: true,
       }) as Grid)
     : []
+
   return { name: sheetNameFromFilename(filename), grid }
 }
 
 /** Combines several `.csv` uploads into one workbook. */
-export function workbookFromCsvFiles(files: { filename: string; text: string }[]): Workbook {
+export const workbookFromCsvFiles = (files: { filename: string; text: string }[]): Workbook => {
   const sheets: Workbook = new Map()
   for (const file of files) {
     const { name, grid } = readCsvSheet(file.filename, file.text)
     sheets.set(name, grid)
   }
+
   return sheets
 }
 
@@ -63,8 +65,9 @@ export function workbookFromCsvFiles(files: { filename: string; text: string }[]
  * `Konfigurace_Struktura_-_2_Content.csv` to `2_Content`: the export from
  * Google Sheets prefixes the document name and separates the tab with ` - `.
  */
-export function sheetNameFromFilename(filename: string): string {
+export const sheetNameFromFilename = (filename: string): string => {
   const base = (filename.split('/').pop() ?? filename).replace(/\.csv$/i, '')
   const separated = base.split(/\s*-\s*|_-_/)
+
   return (separated.at(-1) ?? base).trim()
 }

@@ -12,7 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { authorName, createdAt } from './_shared'
+import { authorName, createdAt } from './columns'
 import { computationKind, computationStatus } from './enums'
 import { chapters, configVersions, runs } from './runs'
 

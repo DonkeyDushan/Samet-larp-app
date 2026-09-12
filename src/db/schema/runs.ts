@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { authorName, createdAt } from './_shared'
+import { authorName, createdAt } from './columns'
 import { cascadeDecision, chapterStatus, runStatus } from './enums'
 
 /**

@@ -6,7 +6,7 @@ import {
   text,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { authorName, createdAt } from './_shared'
+import { authorName, createdAt } from './columns'
 import { computations } from './computations'
 import { rules } from './rules'
 import { chapters, runs } from './runs'

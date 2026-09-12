@@ -19,13 +19,15 @@ export type RunScopedTable = PgTable & { runId: PgColumn }
 /** Run identifier (`2026-09-12_A`). Branded so any string cannot pass as one. */
 export type RunId = string & { readonly __brand: 'RunId' }
 
+/** `<date>_<letter>`, e.g. `2026-09-12_A`; the letter drives the UI colour. */
 const RUN_ID_PATTERN = /^\d{4}-\d{2}-\d{2}_[A-Z]$/
 
 /** Validates the run identifier's shape and brands it. */
-export function parseRunId(value: string): RunId {
+export const parseRunId = (value: string): RunId => {
   if (!RUN_ID_PATTERN.test(value)) {
     throw new Error(`Neplatné ID běhu: ${value}. Očekává se tvar 2026-09-12_A.`)
   }
+
   return value as RunId
 }
 
@@ -71,6 +73,7 @@ export class RunScope {
       ...row,
       runId: this.runId,
     }))
+
     // `values()` cannot be typed through the generic, but the rows above are
     // already derived from `$inferInsert`.
     return this.db.insert(table).values(rows as never)
@@ -105,6 +108,6 @@ export class RunScope {
  * const postavy = await run.select(characters)
  * ```
  */
-export function forRun(runId: string | RunId, db?: Database): RunScope {
+export const forRun = (runId: string | RunId, db?: Database): RunScope => {
   return new RunScope(parseRunId(runId), db)
 }

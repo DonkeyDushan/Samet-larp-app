@@ -6,8 +6,9 @@
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { importWorkbook, importXlsx, type ImportResult } from './index'
-import type { Workbook } from './parse-config'
+import { importWorkbook, importXlsx } from './import-config'
+import type { ImportResult } from './types/import-result'
+import type { Workbook } from './types/parsed-config'
 
 const valid = () => importXlsx(readFileSync('documents/fixture-platny.xlsx'))
 const broken = () => importXlsx(readFileSync('documents/fixture-vadny.xlsx'))

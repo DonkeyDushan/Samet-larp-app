@@ -6,7 +6,9 @@
  * only on the first row of a group (§8.2). All of that is handled quietly here,
  * but every repair is counted so the import report can say what was cleaned up.
  */
-import { columnLetter, type IssueLocation } from './issues'
+import { FIRST_BODY_ROW_NUMBER } from './constants/spreadsheet'
+import type { IssueLocation } from './types/issue'
+import { columnLetter } from './utils/column-letter'
 
 /** A row with its original position, so every message can point at the sheet. */
 export interface SheetRow {
@@ -41,16 +43,17 @@ export type Grid = string[][]
  *
  * Diacritics are left untouched — they are legitimate content in IDs and names.
  */
-export function normalizeCell(value: unknown): string {
+export const normalizeCell = (value: unknown): string => {
   if (value === null || value === undefined) return ''
+
   return String(value).replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 export interface ReadSheetOptions {
   /** Columns whose value carries down from the first row of a merged group. */
-  fillDown?: string[]
+  fillDown?: readonly string[]
   /** A row is considered empty when every one of these is blank. */
-  identityColumns?: string[]
+  identityColumns?: readonly string[]
 }
 
 /**
@@ -59,11 +62,11 @@ export interface ReadSheetOptions {
  * Duplicate headers keep the first occurrence: a second column with the same
  * name is almost always a leftover, and silently overwriting would hide it.
  */
-export function readSheet(
+export const readSheet = (
   sheetName: string,
   grid: Grid,
   options: ReadSheetOptions = {},
-): SheetReadResult {
+): SheetReadResult => {
   const repairs = { trimmedCells: 0, filledDownCells: 0, skippedEmptyRows: 0 }
   const [headerRow = [], ...bodyRows] = grid
 
@@ -83,12 +86,12 @@ export function readSheet(
   const rows: SheetRow[] = []
 
   bodyRows.forEach((rawRow, bodyIndex) => {
-    const rowNumber = bodyIndex + 2 // header is row 1
+    const rowNumber = bodyIndex + FIRST_BODY_ROW_NUMBER
     const values: Record<string, string> = {}
     let anyValue = false
 
-    for (const header of headers) {
-      const raw = rawRow[headerIndex.get(header)!]
+    for (const [header, columnIndex] of headerIndex) {
+      const raw = rawRow[columnIndex]
       const clean = normalizeCell(raw)
       if (raw !== undefined && raw !== null && String(raw) !== clean) repairs.trimmedCells++
       values[header] = clean
@@ -100,6 +103,7 @@ export function readSheet(
       // A blank row ends a merged group; carrying values across it would attach
       // variants to the wrong block.
       carried.clear()
+
       return
     }
 
@@ -119,18 +123,19 @@ export function readSheet(
   return { rows, headers, repairs }
 }
 
-function makeRow(
+const makeRow = (
   sheet: string,
   rowNumber: number,
   values: Record<string, string>,
   headerIndex: Map<string, number>,
-): SheetRow {
+): SheetRow => {
   return {
     rowNumber,
     values,
     get: (column) => values[column] ?? '',
     at: (column) => {
       const index = headerIndex.get(column)
+
       return {
         sheet,
         row: rowNumber,
@@ -142,7 +147,8 @@ function makeRow(
 }
 
 /** Headers present in the sheet but not in the expected list — usually a rename. */
-export function missingColumns(headers: string[], required: string[]): string[] {
+export const missingColumns = (headers: string[], required: readonly string[]): string[] => {
   const present = new Set(headers)
+
   return required.filter((column) => !present.has(column))
 }

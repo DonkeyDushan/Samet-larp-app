@@ -10,16 +10,17 @@
  * sheet have to come out equal.
  */
 import { createHash } from 'node:crypto'
-import type { ParsedConfig } from './types'
+import type { ParsedConfig } from './types/parsed-config'
 
-export function fingerprintConfig(config: ParsedConfig): string {
+export const fingerprintConfig = (config: ParsedConfig): string => {
   const hash = createHash('sha256')
   hash.update(JSON.stringify(stableShape(config)))
+
   return hash.digest('hex')
 }
 
 /** Sorted, so map iteration order cannot change the fingerprint. */
-function stableShape(config: ParsedConfig) {
+const stableShape = (config: ParsedConfig) => {
   return {
     characters: config.characters
       .map((c) => ({

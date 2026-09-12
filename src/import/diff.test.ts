@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { diffConfigs } from './diff'
-import { importXlsx, importWorkbook } from './index'
+import { importXlsx, importWorkbook } from './import-config'
 import { readWorkbook } from './workbook'
 
 const validConfig = () => importXlsx(readFileSync('documents/fixture-platny.xlsx')).config

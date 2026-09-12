@@ -8,7 +8,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { createdAt } from './_shared'
+import { createdAt } from './columns'
 import { mergeStrategy, scaleScope, splitStrategy } from './enums'
 import { characters } from './characters'
 import { configVersions, runs } from './runs'

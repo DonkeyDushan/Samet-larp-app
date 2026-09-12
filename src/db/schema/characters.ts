@@ -6,7 +6,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { createdAt } from './_shared'
+import { createdAt } from './columns'
 import { configVersions, runs } from './runs'
 
 /**

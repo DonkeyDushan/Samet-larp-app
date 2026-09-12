@@ -1,5 +1,5 @@
 import { foreignKey, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core'
-import { createdAt } from './_shared'
+import { createdAt } from './columns'
 import { chapters, runs } from './runs'
 
 /**
