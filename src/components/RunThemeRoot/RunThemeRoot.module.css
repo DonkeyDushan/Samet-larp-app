@@ -1,0 +1,26 @@
+/*
+ * Sets the run colour once for the whole screen; the header and panel accents
+ * read it through the cascade instead of receiving class names.
+ */
+.root {
+  --run-header-bg: #262626;
+  --run-header-fg: #ffffff;
+  --run-accent: #a3a3a3;
+
+  min-height: 100dvh;
+}
+
+.root[data-run='A'] {
+  --run-header-bg: #1d4ed8;
+  --run-accent: #2563eb;
+}
+
+.root[data-run='B'] {
+  --run-header-bg: #d97706;
+  --run-accent: #f59e0b;
+}
+
+.root[data-run='other'] {
+  --run-header-bg: #334155;
+  --run-accent: #64748b;
+}

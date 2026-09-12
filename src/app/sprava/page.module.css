@@ -1,0 +1,8 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mui-spacing) * 3);
+  max-width: 56rem;
+  margin-inline: auto;
+  padding: calc(var(--mui-spacing) * 3) calc(var(--mui-spacing) * 2);
+}

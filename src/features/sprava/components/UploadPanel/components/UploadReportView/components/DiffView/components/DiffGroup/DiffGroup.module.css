@@ -1,0 +1,27 @@
+.group + .group {
+  margin-top: calc(var(--mui-spacing) * 1.5);
+}
+
+.title {
+  font-weight: 500;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mui-spacing) * 0.5);
+  margin: calc(var(--mui-spacing) * 0.5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kind {
+  color: var(--mui-palette-text-secondary);
+}
+
+.changes {
+  margin: calc(var(--mui-spacing) * 0.25) 0 0 calc(var(--mui-spacing) * 2);
+  padding: 0;
+  list-style: none;
+  color: var(--mui-palette-text-secondary);
+}

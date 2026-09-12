@@ -1,3 +1,5 @@
+import Alert from '@mui/material/Alert'
+import Typography from '@mui/material/Typography'
 import { common } from '@/locales/cs/common'
 import { importReport } from '@/locales/cs/import_report'
 import { CHAPTER_LIST_SEPARATOR } from '../../../../constants/report-format'
@@ -9,39 +11,37 @@ import { DiffView } from './components/DiffView/DiffView'
 import { IssueList } from './components/IssueList/IssueList'
 import { Repairs } from './components/Repairs/Repairs'
 import { Stat } from './components/Stat/Stat'
+import styles from './UploadReportView.module.css'
 
 export const UploadReportView = ({ report }: { report: UploadReport }) => {
   const { errors, warnings } = splitIssuesBySeverity(report.issues)
   const repairNotes = report.repairs ? buildRepairNotes(report.repairs, report.ignoredSheets ?? []) : []
 
   return (
-    <div
-      className="mt-6 space-y-4 border-t border-neutral-200 pt-4 text-sm dark:border-neutral-800"
-      data-testid="upload-report"
-    >
+    <div className={styles.report} data-testid="upload-report">
       {report.failure && (
-        <p className="rounded bg-red-50 p-3 text-red-800 dark:bg-red-950 dark:text-red-200" data-testid="upload-report--failure">
+        <Alert severity="error" data-testid="upload-report--failure">
           {report.failure}
-        </p>
+        </Alert>
       )}
 
       {report.filename !== '' && (
-        <p data-testid="upload-report--verdict" data-usable={report.ok}>
+        <Typography variant="body2" data-testid="upload-report--verdict">
           <strong>{report.filename}</strong>{' '}
-          <span className="data-[usable=true]:text-green-700 data-[usable=false]:text-red-700 dark:data-[usable=true]:text-green-400 dark:data-[usable=false]:text-red-400" data-usable={report.ok}>
+          <span className={styles.verdict} data-usable={report.ok}>
             {report.ok ? importReport.usable : importReport.unusable}
           </span>
-        </p>
+        </Typography>
       )}
 
       {report.version !== undefined && (
-        <p className="rounded bg-green-50 p-3 text-green-900 dark:bg-green-950 dark:text-green-100" data-testid="upload-report--saved">
+        <Alert severity="success" data-testid="upload-report--saved">
           {report.alreadyImported ? importReport.alreadyImported(report.version) : importReport.saved(report.version)}
-        </p>
+        </Alert>
       )}
 
       {report.counts && (
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3" data-testid="upload-report--counts">
+        <dl className={styles.counts} data-testid="upload-report--counts">
           <Stat label={importReport.chapters} value={report.chapters?.join(CHAPTER_LIST_SEPARATOR) || common.emptyValue} />
           <Stat label={importReport.characters} value={report.counts.characters} />
           <Stat label={importReport.questions} value={report.counts.questions} />

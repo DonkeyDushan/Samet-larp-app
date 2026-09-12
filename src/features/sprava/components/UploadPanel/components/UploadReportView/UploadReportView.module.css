@@ -1,0 +1,30 @@
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mui-spacing) * 2);
+  margin-top: calc(var(--mui-spacing) * 3);
+  padding-top: calc(var(--mui-spacing) * 2);
+  border-top: 1px solid var(--mui-palette-divider);
+}
+
+.verdict[data-usable='true'] {
+  color: var(--mui-palette-success-main);
+}
+
+.verdict[data-usable='false'] {
+  color: var(--mui-palette-error-main);
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--mui-spacing) * 0.5) calc(var(--mui-spacing) * 2);
+  margin: 0;
+}
+
+/* MUI `sm` breakpoint. */
+@media (min-width: 600px) {
+  .counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

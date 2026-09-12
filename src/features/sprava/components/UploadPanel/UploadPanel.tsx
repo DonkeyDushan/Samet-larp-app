@@ -1,76 +1,81 @@
 'use client'
 
 /** Upload form and the report it produces (§10.2). */
+import Button from '@mui/material/Button'
+import Paper from '@mui/material/Paper'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { AuthorField } from '@/components'
 import { sprava } from '@/locales/cs/sprava'
 import { UPLOAD_ACCEPT, UPLOAD_FIELDS } from '../../constants/upload-fields'
 import { useUploadReport } from '../../hooks/useUploadReport'
 import { UploadReportView } from './components/UploadReportView/UploadReportView'
+import styles from './UploadPanel.module.css'
 
-interface UploadPanelProps {
-  runId: string
-  accentClassName: string
-}
-
-const INPUT_CLASS = 'mt-1 block w-full rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-800'
-
-export const UploadPanel = ({ runId, accentClassName }: UploadPanelProps) => {
+export const UploadPanel = ({ runId }: { runId: string }) => {
   const [author, setAuthor] = useState('')
   const { report, pending, canSave, handleCheck, handleSave } = useUploadReport()
 
   return (
-    <section
-      className={`rounded border-l-4 ${accentClassName} bg-neutral-50 p-4 dark:bg-neutral-900`}
-      data-testid="upload-panel"
-    >
-      <h2 className="text-base font-semibold">{sprava.uploadTitle}</h2>
-      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+    <Paper variant="outlined" component="section" className={styles.panel} data-testid="upload-panel">
+      <Typography variant="h6" component="h2">
+        {sprava.uploadTitle}
+      </Typography>
+      <Typography variant="body2" className={styles.hint}>
         {sprava.uploadHintBefore}
         <em>{sprava.uploadHintMenu}</em>
         {sprava.uploadHintMiddle}
         <code>{sprava.uploadHintFormat}</code>
         {sprava.uploadHintAfter}
-      </p>
+      </Typography>
 
-      <form className="mt-4 space-y-4" onSubmit={handleCheck} data-testid="upload-form">
+      <form className={styles.form} onSubmit={handleCheck} data-testid="upload-form">
         <input type="hidden" name={UPLOAD_FIELDS.runId} value={runId} />
 
-        <label className="block text-sm">
-          <span className="font-medium">{sprava.configLabel}</span>
+        <label className={styles.fileField}>
+          <Typography variant="subtitle2" component="span">
+            {sprava.configLabel}
+          </Typography>
           <input
             type="file"
             name={UPLOAD_FIELDS.config}
             accept={UPLOAD_ACCEPT.config}
-            className="mt-1 block w-full text-sm"
+            className={styles.fileInput}
             data-testid="upload-form--config"
           />
         </label>
 
-        <label className="block text-sm">
-          <span className="font-medium">{sprava.templatesLabel}</span>
+        <label className={styles.fileField}>
+          <Typography variant="subtitle2" component="span">
+            {sprava.templatesLabel}
+          </Typography>
           <input
             type="file"
             name={UPLOAD_FIELDS.templates}
             accept={UPLOAD_ACCEPT.templates}
             multiple
-            className="mt-1 block w-full text-sm"
+            className={styles.fileInput}
             data-testid="upload-form--templates"
           />
-          <span className="mt-1 block text-xs text-neutral-500">{sprava.templatesHint}</span>
+          <Typography variant="caption" component="span" className={styles.hint}>
+            {sprava.templatesHint}
+          </Typography>
         </label>
 
-        <details className="text-sm">
-          <summary className="cursor-pointer text-neutral-600 dark:text-neutral-400">{sprava.csvFallbackSummary}</summary>
+        <details className={styles.fallback}>
+          <summary className={styles.fallbackSummary}>{sprava.csvFallbackSummary}</summary>
           <input
             type="file"
             name={UPLOAD_FIELDS.configCsv}
             accept={UPLOAD_ACCEPT.configCsv}
             multiple
-            className="mt-2 block w-full text-sm"
+            className={styles.fileInput}
             data-testid="upload-form--csv"
           />
-          <p className="mt-1 text-xs text-neutral-500">{sprava.csvFallbackHint}</p>
+          <Typography variant="caption" component="p" className={styles.hint}>
+            {sprava.csvFallbackHint}
+          </Typography>
         </details>
 
         <AuthorField
@@ -81,34 +86,31 @@ export const UploadPanel = ({ runId, accentClassName }: UploadPanelProps) => {
           testId="upload-form--author"
         />
 
-        <label className="block text-sm">
-          <span className="font-medium">{sprava.noteLabel}</span>
-          <input name={UPLOAD_FIELDS.note} className={INPUT_CLASS} data-testid="upload-form--note" />
-        </label>
+        <TextField
+          name={UPLOAD_FIELDS.note}
+          label={sprava.noteLabel}
+          fullWidth
+          slotProps={{ htmlInput: { 'data-testid': 'upload-form--note' } }}
+        />
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded bg-neutral-800 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-200 dark:text-neutral-900"
-            data-testid="upload-form--check"
-          >
+        <div className={styles.actions}>
+          <Button type="submit" variant="contained" disabled={pending} data-testid="upload-form--check">
             {pending ? sprava.checking : sprava.check}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="outlined"
             disabled={!canSave}
             formNoValidate
             onClick={handleSave}
-            className="rounded border border-neutral-400 px-3 py-1.5 text-sm font-medium disabled:opacity-40 dark:border-neutral-600"
             data-testid="upload-form--save"
           >
             {sprava.save}
-          </button>
+          </Button>
         </div>
       </form>
 
       {report && <UploadReportView report={report} />}
-    </section>
+    </Paper>
   )
 }

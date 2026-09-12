@@ -1,10 +1,12 @@
 /** Admin screen route (§10.2); the screen itself lives in `features/sprava`. */
-import { RunHeader } from '@/components'
+import Alert from '@mui/material/Alert'
+import { RunHeader, RunThemeRoot } from '@/components'
 import { RUN_QUERY_PARAM } from '@/core'
 import { loadAdminData, UploadPanel, VersionHistory } from '@/features/sprava'
 import { errors } from '@/locales/cs/errors'
 import { sprava } from '@/locales/cs/sprava'
-import { runTheme } from '@/theme/run-theme'
+import { runThemeKey } from '@/theme/run-theme'
+import styles from './page.module.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,33 +18,28 @@ const SpravaPage = async ({ searchParams }: SpravaPageProps) => {
   const params = await searchParams
   const { runs, runId, versions, failure } = await loadAdminData(params[RUN_QUERY_PARAM])
 
-  const theme = runTheme(runId)
-
   return (
-    <div className="min-h-dvh">
-      <RunHeader section={sprava.title} runId={runId} runs={runs} colorClassName={theme.header} />
+    <RunThemeRoot themeKey={runThemeKey(runId)}>
+      <RunHeader section={sprava.title} runId={runId} runs={runs} />
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+      <main className={styles.main}>
         {failure && (
-          <p
-            className="rounded bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"
-            data-testid="sprava--db-failure"
-          >
+          <Alert severity="warning" data-testid="sprava--db-failure">
             {errors.databaseUnavailable(failure)}
-          </p>
+          </Alert>
         )}
 
         {!runId && !failure && (
-          <p className="rounded bg-neutral-100 p-3 text-sm dark:bg-neutral-800" data-testid="sprava--no-run">
+          <Alert severity="info" data-testid="sprava--no-run">
             {sprava.noRunYet}
-          </p>
+          </Alert>
         )}
 
-        <UploadPanel runId={runId ?? ''} accentClassName={theme.accent} />
+        <UploadPanel runId={runId ?? ''} />
 
         {runId && <VersionHistory runId={runId} versions={versions} />}
       </main>
-    </div>
+    </RunThemeRoot>
   )
 }
 

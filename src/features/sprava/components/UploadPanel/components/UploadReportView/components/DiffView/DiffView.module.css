@@ -1,0 +1,5 @@
+.body {
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: calc(var(--mui-spacing) * 1.5);
+}

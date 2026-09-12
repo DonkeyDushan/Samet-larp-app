@@ -1,0 +1,17 @@
+.expected {
+  color: var(--mui-palette-text-secondary);
+}
+
+.status[data-status='prirazena'] {
+  color: var(--mui-palette-success-main);
+}
+
+.status[data-status='chybi'],
+.status[data-status='nezadana'] {
+  color: var(--mui-palette-error-main);
+}
+
+.unmatched {
+  padding: var(--mui-spacing) calc(var(--mui-spacing) * 1.5);
+  color: var(--mui-palette-warning-main);
+}

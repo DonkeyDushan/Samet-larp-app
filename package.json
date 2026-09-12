@@ -23,6 +23,11 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.4.0",
+    "@mui/material-nextjs": "^9.4.0",
     "drizzle-orm": "^0.44.2",
     "jsep": "^1.4.0",
     "jszip": "^3.10.1",
@@ -34,7 +39,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
@@ -42,7 +46,6 @@
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.27.0",
     "eslint-config-next": "^15.5.0",
-    "tailwindcss": "^4.1.0",
     "tsx": "^4.19.4",
     "typescript": "^5.9.0",
     "vitest": "^3.1.0"

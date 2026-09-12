@@ -1,0 +1,22 @@
+.panel {
+  --panel-border: var(--mui-palette-divider);
+
+  border-color: var(--panel-border);
+}
+
+.panel[data-tone='error'] {
+  --panel-border: var(--mui-palette-error-main);
+}
+
+.panel[data-tone='warning'] {
+  --panel-border: var(--mui-palette-warning-main);
+}
+
+.head {
+  padding: var(--mui-spacing) calc(var(--mui-spacing) * 1.5);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.note {
+  color: var(--mui-palette-text-secondary);
+}

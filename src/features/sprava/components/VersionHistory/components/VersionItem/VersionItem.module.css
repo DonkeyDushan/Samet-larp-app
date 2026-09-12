@@ -1,0 +1,38 @@
+.item {
+  padding: calc(var(--mui-spacing) * 1.5);
+}
+
+.item + .item {
+  border-top: 1px solid var(--mui-palette-divider);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mui-spacing);
+}
+
+.chip {
+  margin-left: var(--mui-spacing);
+}
+
+.muted {
+  color: var(--mui-palette-text-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: var(--mui-spacing);
+}
+
+.findings {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mui-spacing) * 0.5);
+  margin: calc(var(--mui-spacing) * 1.5) 0 0;
+  padding: var(--mui-spacing) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--mui-palette-divider);
+}

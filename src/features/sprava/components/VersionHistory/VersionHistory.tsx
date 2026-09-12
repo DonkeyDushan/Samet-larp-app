@@ -6,12 +6,15 @@
  * Every import is a version and none is ever replaced, so this is also the
  * record of what the config looked like when a chapter was computed.
  */
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
 import { AuthorField } from '@/components'
 import { sprava } from '@/locales/cs/sprava'
 import { useExpandedVersion } from '../../hooks/useExpandedVersion'
 import { useVersionActivation } from '../../hooks/useVersionActivation'
 import type { VersionRow } from '../../types/version-row'
 import { VersionItem } from './components/VersionItem/VersionItem'
+import styles from './VersionHistory.module.css'
 
 interface VersionHistoryProps {
   runId: string
@@ -25,22 +28,30 @@ export const VersionHistory = ({ runId, versions }: VersionHistoryProps) => {
   if (versions.length === 0) {
     return (
       <section data-testid="version-history">
-        <h2 className="text-base font-semibold">{sprava.historyTitle}</h2>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{sprava.historyEmpty}</p>
+        <Typography variant="h6" component="h2">
+          {sprava.historyTitle}
+        </Typography>
+        <Typography variant="body2" className={styles.hint}>
+          {sprava.historyEmpty}
+        </Typography>
       </section>
     )
   }
 
   return (
     <section data-testid="version-history">
-      <h2 className="text-base font-semibold">{sprava.historyTitle}</h2>
-      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{sprava.historyIntro}</p>
+      <Typography variant="h6" component="h2">
+        {sprava.historyTitle}
+      </Typography>
+      <Typography variant="body2" className={styles.hint}>
+        {sprava.historyIntro}
+      </Typography>
 
-      <div className="mt-3">
-        <AuthorField value={author} onChange={setAuthor} className="max-w-xs" testId="version-history--author" />
+      <div className={styles.author}>
+        <AuthorField value={author} onChange={setAuthor} narrow testId="version-history--author" />
       </div>
 
-      <ul className="mt-3 divide-y divide-neutral-200 rounded border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+      <Paper variant="outlined" component="ul" className={styles.list}>
         {versions.map((version) => (
           <VersionItem
             key={version.id}
@@ -53,7 +64,7 @@ export const VersionHistory = ({ runId, versions }: VersionHistoryProps) => {
             onActivate={activate}
           />
         ))}
-      </ul>
+      </Paper>
     </section>
   )
 }

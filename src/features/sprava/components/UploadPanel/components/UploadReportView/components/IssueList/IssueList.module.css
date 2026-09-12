@@ -1,0 +1,27 @@
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: var(--mui-spacing) calc(var(--mui-spacing) * 1.5);
+}
+
+.item + .item {
+  border-top: 1px solid var(--mui-palette-divider);
+}
+
+.location {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--mui-palette-text-secondary);
+}
+
+.suggestion {
+  color: var(--mui-palette-text-secondary);
+}
+
+.suggestedValue {
+  font-weight: 500;
+}

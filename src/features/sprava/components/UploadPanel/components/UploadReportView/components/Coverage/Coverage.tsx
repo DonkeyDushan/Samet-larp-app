@@ -1,40 +1,46 @@
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableRow from '@mui/material/TableRow'
+import Typography from '@mui/material/Typography'
+import { TitledPanel } from '@/components'
 import type { TemplateCoverage } from '@/import'
 import { common } from '@/locales/cs/common'
 import { importReport } from '@/locales/cs/import_report'
+import styles from './Coverage.module.css'
 
 /** Which character still has no template (§10.3). */
 export const Coverage = ({ coverage }: { coverage: TemplateCoverage }) => (
-  <div className="rounded border border-neutral-200 dark:border-neutral-800" data-testid="template-coverage">
-    <div className="border-b border-inherit px-3 py-2">
-      <h3 className="font-semibold">{importReport.templatesTitle}</h3>
-      <p className="text-xs text-neutral-500">
-        {coverage.missingCount === 0
-          ? importReport.allTemplatesPresent
-          : importReport.missingTemplates(coverage.missingCount)}
-      </p>
-    </div>
-    <table className="w-full text-xs">
-      <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+  <TitledPanel
+    title={importReport.templatesTitle}
+    note={
+      coverage.missingCount === 0
+        ? importReport.allTemplatesPresent
+        : importReport.missingTemplates(coverage.missingCount)
+    }
+    testId="template-coverage"
+  >
+    <Table size="small">
+      <TableBody>
         {coverage.assignments.map((row) => (
-          <tr key={row.characterExternalId} data-testid={`template-coverage--${row.characterExternalId}`}>
-            <td className="px-3 py-1.5">{row.characterName}</td>
-            <td className="px-3 py-1.5 font-mono text-neutral-500">{row.expected || common.emptyValue}</td>
-            <td
-              className="px-3 py-1.5 data-[status=prirazena]:text-green-700 data-[status=chybi]:text-red-700 data-[status=nezadana]:text-red-700 dark:data-[status=prirazena]:text-green-400 dark:data-[status=chybi]:text-red-400 dark:data-[status=nezadana]:text-red-400"
-              data-status={row.status}
-            >
+          <TableRow key={row.characterExternalId} data-testid={`template-coverage--${row.characterExternalId}`}>
+            <TableCell>{row.characterName}</TableCell>
+            <TableCell>
+              <code className={styles.expected}>{row.expected || common.emptyValue}</code>
+            </TableCell>
+            <TableCell className={styles.status} data-status={row.status}>
               {row.status === 'prirazena' && row.filename}
               {row.status === 'chybi' && importReport.templateMissing}
               {row.status === 'nezadana' && importReport.templateUnassigned}
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
     {coverage.unmatched.length > 0 && (
-      <p className="border-t border-inherit px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+      <Typography variant="caption" component="p" className={styles.unmatched}>
         {importReport.unmatchedTemplates(coverage.unmatched.map((template) => template.filename))}
-      </p>
+      </Typography>
     )}
-  </div>
+  </TitledPanel>
 )

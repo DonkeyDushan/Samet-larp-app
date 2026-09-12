@@ -94,7 +94,7 @@ nepřinesla, si nechá starý otisk a tím vypadne z aktivní sady. Nic se nema�
 | Framework | Next.js, App Router, TypeScript |
 | Databáze | Postgres (Neon), lokálně `scripts/pg.sh` nebo Docker |
 | ORM | Drizzle |
-| UI | Tailwind, vlastní jednoduché komponenty |
+| UI | MUI (Material UI) + vlastní jednoduché komponenty; styly v CSS Modules přes data atributy, bez `sx` a inline stylů |
 | Testy | Vitest, primárně na engine pravidel a import |
 | Import tabulek | SheetJS (`xlsx`) |
 | Výrazy v podmínkách | `jsep` |
