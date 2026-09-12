@@ -7,7 +7,7 @@ import {
   numeric,
   pgTable,
   text,
-  uniqueIndex,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { createdAt } from './_shared'
@@ -63,8 +63,8 @@ export const rules = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('rules_run_id_key').on(t.runId, t.id),
-    uniqueIndex('rules_run_external_key').on(t.runId, t.externalId),
+    unique('rules_run_id_key').on(t.runId, t.id),
+    unique('rules_run_external_key').on(t.runId, t.externalId),
     check('rules_dice_sides_positive', sql`${t.diceSides} is null or ${t.diceSides} >= 2`),
     foreignKey({
       name: 'rules_chapter_fk',
@@ -136,7 +136,7 @@ export const ruleConditions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('rule_conditions_position_key').on(t.runId, t.ruleId, t.groupIndex, t.position),
+    unique('rule_conditions_position_key').on(t.runId, t.ruleId, t.groupIndex, t.position),
     foreignKey({
       name: 'rule_conditions_rule_fk',
       columns: [t.runId, t.ruleId],

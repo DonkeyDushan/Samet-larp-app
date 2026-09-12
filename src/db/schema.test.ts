@@ -14,7 +14,9 @@ import * as schema from './schema'
 /** `runs` je sama tou tabulkou, na kterou `run_id` odkazuje. */
 const WITHOUT_RUN_ID = new Set(['runs'])
 
-const tables = Object.values(schema)
+// `schema` exportuje tabulky i enumy; `unknown[]` proto, aby predikát `is`
+// nemusel být přiřaditelný do jejich sjednoceného typu.
+const tables = (Object.values(schema) as unknown[])
   .filter((value): value is PgTable => is(value, PgTable))
   .map((table) => ({ name: getTableName(table), columns: getTableColumns(table) }))
 

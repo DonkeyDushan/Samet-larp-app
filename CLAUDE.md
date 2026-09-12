@@ -154,6 +154,12 @@ Speciální hodnota odpovědi `_OTHER_` = volný text doplněný orgem.
   v `src/db/schema/` je jediný zdroj pravdy o struktuře databáze.
 - Co Drizzle neumí vyjádřit, patří do `db/sql/` jako **idempotentní** skript
   a pouští se `npm run db:sql` po migracích.
+- **Unikát, na který míří cizí klíč, musí být `unique()`, ne `uniqueIndex()`.**
+  Drizzle generuje `CREATE UNIQUE INDEX` až za `ALTER TABLE ADD CONSTRAINT
+  ... FOREIGN KEY`, takže FK na `(run_id, id)` by v migraci neměl na co ukázat
+  a migrace spadne. `uniqueIndex()` zůstává jen pro **částečné** unikáty
+  s `.where()`, které constraint neumí (aktivní verze konfigurace, vydaný přepočet,
+  aktivní šablona).
 - Testy pokrývají primárně engine. Zbytek se testuje ručně. Výjimka:
   `src/db/schema.test.ts` hlídá architektonické pravidlo 2.
 - Než začneš stavět další vrstvu, ověř `npm run typecheck` a `npm test`.

@@ -12,39 +12,54 @@ pravdy**. Architektonická pravidla, která platí v každé session, jsou v
 
 ## Stav projektu
 
-Hotové je datové schéma a typy enginu. Engine, import `.xlsx` ani rozhraní ještě
-nestojí — viz harmonogram v §15.1 zadání.
+Hotové je datové schéma (24 tabulek, migrace aplikovaná a odzkoušená) a typy
+enginu. Engine, import `.xlsx` ani rozhraní ještě nestojí — viz harmonogram
+v §15.1 zadání.
 
 ## Co je potřeba mít
 
-- **Node.js 22** (viz `.nvmrc`). Na CachyOS: `sudo pacman -S nodejs npm`,
-  nebo přes [fnm](https://github.com/Schniz/fnm) / nvm.
-- **Docker** pro lokální Postgres — nebo dev větev na [Neonu](https://neon.tech),
-  pak Docker není potřeba.
+- **Node.js 22** (viz `.nvmrc`). Přes nvm: `nvm install`.
+- **Postgres pro lokální vývoj** — jedna ze tří cest:
+  - **nainstalovaný Postgres bez Dockeru** (`sudo pacman -S postgresql`) a cluster
+    pod tvým uživatelem, viz `scripts/pg.sh` níže. Nepotřebuje root ani systemd
+    službu, celý cluster je v `~/.local/share/samet-larp/`.
+  - **Docker** a `docker compose up -d` podle `docker-compose.yml`.
+  - **dev větev na [Neonu](https://neon.tech)** — pak stačí `DATABASE_URL` v `.env`.
+
+Všechny tři varianty poslouchají na portu **5433**, takže `.env` platí pro kteroukoli.
 
 ## Lokální spuštění
 
 ```bash
 # 1) závislosti
+nvm install                 # Node podle .nvmrc
 npm install
 
 # 2) prostředí
-cp .env.example .env        # DATABASE_URL míří na lokální Postgres z docker-compose
+cp .env.example .env
 
-# 3) databáze
-docker compose up -d        # Postgres na portu 5433
-npm run db:generate         # vygeneruje migraci ze schématu do drizzle/
-npm run db:migrate          # aplikuje migrace
+# 3) databáze — varianta bez Dockeru
+npm run pg init             # založí cluster, spustí ho a vyrobí databázi samet_larp
+#    nebo varianta s Dockerem
+docker compose up -d
+
+# 4) schéma a data
+npm run db:migrate          # aplikuje migrace z drizzle/
 npm run db:sql              # doplní SQL, které Drizzle neumí (append-only audit)
 npm run db:seed             # ukázková data: běh 2026-09-12_A, Marie Balážová
 
-# 4) aplikace
+# 5) aplikace
 npm run dev                 # http://localhost:3000
 ```
 
-Při vývoji schématu je rychlejší cesta `npm run db:setup` (= `db:push` + `db:sql`),
-která schéma nasype do databáze bez generování migrace. Migraci vygeneruj, až
-bude tvar schématu ustálený — do produkce jde jen `db:migrate`.
+Cluster se pak ovládá `npm run pg start` / `stop` / `status`, a `npm run pg psql`
+otevře konzoli nad `samet_larp`. Autentizace je `trust` na loopbacku — heslo
+v `DATABASE_URL` server ignoruje.
+
+Po každé změně schématu: `npm run db:generate` vyrobí novou migraci, `npm run
+db:migrate` ji aplikuje. Při rychlém experimentování se schématem jde použít
+`npm run db:setup` (= `db:push` + `db:sql`), která schéma nasype do databáze bez
+migrace — ale do gitu patří vygenerovaná migrace, ne pushnuté schéma.
 
 ## Skripty
 
@@ -55,6 +70,7 @@ bude tvar schématu ustálený — do produkce jde jen `db:migrate`.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint, včetně kontroly, že engine nesahá do DB a Reactu |
 | `npm test` | Vitest — primárně engine pravidel |
+| `npm run pg init` / `start` / `stop` / `status` / `psql` | lokální Postgres cluster bez Dockeru |
 | `npm run db:generate` | vygeneruje SQL migraci z Drizzle schématu |
 | `npm run db:migrate` | aplikuje migrace |
 | `npm run db:push` | nasype schéma do DB bez migrace (jen pro vývoj) |
@@ -75,8 +91,8 @@ src/
 └── app/             Next.js App Router — rozhraní, zatím jen zástupná stránka
 
 db/sql/              ruční SQL mimo Drizzle (append-only audit)
-scripts/             seed a pomocné skripty
-drizzle/             vygenerované migrace (vzniknou po npm run db:generate)
+scripts/             seed, správa lokálního Postgresu, pomocné skripty
+drizzle/             vygenerované migrace — patří do gitu
 ```
 
 ## Nasazení

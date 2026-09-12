@@ -8,7 +8,6 @@ import {
   text,
   timestamp,
   unique,
-  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { authorName, createdAt } from './_shared'
@@ -268,11 +267,11 @@ export const diceRolls = pgTable(
     isManualOverride: boolean('is_manual_override').notNull().default(false),
     rerollCount: integer('reroll_count').notNull().default(0),
     rolledAt: timestamp('rolled_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
-    rolledBy: authorName(),
+    rolledBy: authorName('rolled_by'),
     reason: text('reason'),
   },
   (t) => [
-    uniqueIndex('dice_rolls_unique').on(t.runId, t.chapterId, t.characterId, t.ruleId),
+    unique('dice_rolls_unique').on(t.runId, t.chapterId, t.characterId, t.ruleId),
     check('dice_rolls_value_in_range', sql`${t.value} between 1 and ${t.sides}`),
     check('dice_rolls_sides_sane', sql`${t.sides} >= 2`),
     foreignKey({

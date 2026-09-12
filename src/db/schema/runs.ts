@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
@@ -33,7 +34,7 @@ export const runs = pgTable(
     status: runStatus('status').notNull().default('zalozen'),
     archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
     createdAt: createdAt(),
-    createdBy: authorName(),
+    createdBy: authorName('created_by'),
   },
   (t) => [
     check('runs_id_format', sql`${t.id} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Z]$'`),
@@ -69,11 +70,11 @@ export const configVersions = pgTable(
     importReport: jsonb('import_report'),
     note: text('note'),
     createdAt: createdAt(),
-    createdBy: authorName(),
+    createdBy: authorName('created_by'),
   },
   (t) => [
-    uniqueIndex('config_versions_run_id_key').on(t.runId, t.id),
-    uniqueIndex('config_versions_run_version_key').on(t.runId, t.version),
+    unique('config_versions_run_id_key').on(t.runId, t.id),
+    unique('config_versions_run_version_key').on(t.runId, t.version),
     uniqueIndex('config_versions_one_active_per_run')
       .on(t.runId)
       .where(sql`${t.isActive}`),
@@ -125,8 +126,8 @@ export const chapters = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('chapters_run_id_key').on(t.runId, t.id),
-    uniqueIndex('chapters_run_number_key').on(t.runId, t.number),
+    unique('chapters_run_id_key').on(t.runId, t.id),
+    unique('chapters_run_number_key').on(t.runId, t.number),
     check('chapters_number_range', sql`${t.number} between 1 and 3`),
   ],
 )

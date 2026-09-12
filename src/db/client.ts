@@ -18,7 +18,6 @@ function connectionString(): string {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __larpSql: ReturnType<typeof postgres> | undefined
 }
 

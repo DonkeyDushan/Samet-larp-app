@@ -4,10 +4,11 @@ import { FlatCompat } from '@eslint/eslintrc'
 
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) })
 
-export default [
+const config = [
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
-    ignores: ['.next/**', 'node_modules/**', 'drizzle/**'],
+    // next-env.d.ts generuje Next.js, nemá smysl ho lintovat.
+    ignores: ['.next/**', 'node_modules/**', 'drizzle/**', 'next-env.d.ts'],
   },
   {
     // Architektonické pravidlo 1: engine je čistá funkce bez závislostí na app/ a db/.
@@ -24,3 +25,5 @@ export default [
     },
   },
 ]
+
+export default config

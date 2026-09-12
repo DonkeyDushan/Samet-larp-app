@@ -22,5 +22,8 @@ export const createdAt = () =>
 /**
  * Kdo akci provedl — volný text z pole „Kdo jsi?" (§3.1).
  * Bez ověřování; jediný zdroj identity v celé aplikaci.
+ *
+ * Název sloupce se předává, protože každá tabulka pojmenovává autora podle
+ * toho, co udělal: `created_by`, `answered_by`, `rolled_by`, `author`.
  */
-export const authorName = () => text('author_name').notNull()
+export const authorName = (column: string) => text(column).notNull()

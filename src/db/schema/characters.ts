@@ -1,4 +1,11 @@
-import { foreignKey, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import {
+  foreignKey,
+  integer,
+  pgTable,
+  text,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { createdAt } from './_shared'
 import { configVersions, runs } from './runs'
 
@@ -21,8 +28,8 @@ export const groups = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('groups_run_id_key').on(t.runId, t.id),
-    uniqueIndex('groups_run_external_key').on(t.runId, t.externalId),
+    unique('groups_run_id_key').on(t.runId, t.id),
+    unique('groups_run_external_key').on(t.runId, t.externalId),
     foreignKey({
       name: 'groups_config_version_fk',
       columns: [t.runId, t.sourceConfigVersionId],
@@ -60,8 +67,8 @@ export const characters = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('characters_run_id_key').on(t.runId, t.id),
-    uniqueIndex('characters_run_external_key').on(t.runId, t.externalId),
+    unique('characters_run_id_key').on(t.runId, t.id),
+    unique('characters_run_external_key').on(t.runId, t.externalId),
     foreignKey({
       name: 'characters_home_group_fk',
       columns: [t.runId, t.homeGroupId],

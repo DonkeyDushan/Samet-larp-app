@@ -11,7 +11,7 @@
  * přidej metodu **sem**, ne obcházení v aplikaci.
  */
 import { and, eq, type SQL } from 'drizzle-orm'
-import type { PgColumn, PgTable } from 'drizzle-orm/pg-core'
+import { type PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import { unscopedDb, type Database } from './client'
 
 /** Tabulka, kterou umí `RunScope` obsloužit: musí mít sloupec `run_id`. */
@@ -52,12 +52,21 @@ export class RunScope {
     return and(this.belongsToRun(table), ...conditions) as SQL
   }
 
-  /** `select * from <table> where run_id = ... [and ...]` */
-  select<T extends RunScopedTable>(table: T, ...conditions: (SQL | undefined)[]) {
+  /**
+   * `select * from <table> where run_id = ... [and ...]`
+   *
+   * Vrací hotový `Promise` s řádky, ne skládací builder — Drizzle svůj typ
+   * `from()` nad generickou tabulkou neposkládá. Když je potřeba `order by`,
+   * `limit` nebo join, **přidej metodu sem**, ne dotaz mimo tuhle vrstvu.
+   */
+  select<T extends RunScopedTable>(
+    table: T,
+    ...conditions: (SQL | undefined)[]
+  ): Promise<T['$inferSelect'][]> {
     return this.db
       .select()
-      .from(table)
-      .where(this.scoped(table, ...conditions))
+      .from(table as PgTable)
+      .where(this.scoped(table, ...conditions)) as Promise<T['$inferSelect'][]>
   }
 
   /** Insert s automaticky doplněným `run_id`. */

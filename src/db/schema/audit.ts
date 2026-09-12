@@ -56,7 +56,7 @@ export const auditLog = pgTable(
     reason: text('reason'),
 
     createdAt: createdAt(),
-    author: authorName(),
+    author: authorName('author'),
   },
   (t) => [
     index('audit_log_run_created_idx').on(t.runId, t.createdAt),

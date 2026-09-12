@@ -5,7 +5,7 @@ import {
   integer,
   pgTable,
   text,
-  uniqueIndex,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { createdAt } from './_shared'
@@ -38,8 +38,8 @@ export const scales = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('scales_run_id_key').on(t.runId, t.id),
-    uniqueIndex('scales_run_key_key').on(t.runId, t.key),
+    unique('scales_run_id_key').on(t.runId, t.id),
+    unique('scales_run_key_key').on(t.runId, t.key),
     check('scales_range_sane', sql`${t.minValue} < ${t.maxValue}`),
     // Rozsah 1–10 je rozhodnutí zadání (§4.1), ne konfigurace. Sloupce existují,
     // aby engine hranice nečetl z kódu, ale ven z 1–10 se dostat nesmí.
@@ -76,8 +76,8 @@ export const scaleBands = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('scale_bands_run_id_key').on(t.runId, t.id),
-    uniqueIndex('scale_bands_scale_ordinal_key').on(t.runId, t.scaleId, t.ordinal),
+    unique('scale_bands_run_id_key').on(t.runId, t.id),
+    unique('scale_bands_scale_ordinal_key').on(t.runId, t.scaleId, t.ordinal),
     check('scale_bands_bounds', sql`${t.minValue} <= ${t.maxValue}`),
     check('scale_bands_within_1_10', sql`${t.minValue} >= 1 and ${t.maxValue} <= 10`),
     foreignKey({
@@ -112,9 +112,9 @@ export const characterScales = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('character_scales_run_id_key').on(t.runId, t.id),
-    uniqueIndex('character_scales_unique').on(t.runId, t.characterId, t.scaleId),
-    uniqueIndex('character_scales_external_key').on(t.runId, t.externalId),
+    unique('character_scales_run_id_key').on(t.runId, t.id),
+    unique('character_scales_unique').on(t.runId, t.characterId, t.scaleId),
+    unique('character_scales_external_key').on(t.runId, t.externalId),
     check('character_scales_initial_range', sql`${t.initialValue} between 1 and 10`),
     foreignKey({
       name: 'character_scales_character_fk',
@@ -152,8 +152,8 @@ export const flags = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('flags_run_id_key').on(t.runId, t.id),
-    uniqueIndex('flags_run_key_key').on(t.runId, t.key),
+    unique('flags_run_id_key').on(t.runId, t.id),
+    unique('flags_run_key_key').on(t.runId, t.key),
     foreignKey({
       name: 'flags_config_version_fk',
       columns: [t.runId, t.sourceConfigVersionId],

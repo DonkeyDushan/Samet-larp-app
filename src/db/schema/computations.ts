@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
@@ -71,11 +72,11 @@ export const computations = pgTable(
     confirmedBy: text('confirmed_by'),
 
     createdAt: createdAt(),
-    createdBy: authorName(),
+    createdBy: authorName('created_by'),
   },
   (t) => [
-    uniqueIndex('computations_run_id_key').on(t.runId, t.id),
-    uniqueIndex('computations_chapter_version_key').on(t.runId, t.chapterId, t.version),
+    unique('computations_run_id_key').on(t.runId, t.id),
+    unique('computations_chapter_version_key').on(t.runId, t.chapterId, t.version),
     uniqueIndex('computations_one_released_per_chapter')
       .on(t.runId, t.chapterId)
       .where(sql`${t.isReleased}`),

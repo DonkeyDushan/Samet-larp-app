@@ -7,6 +7,7 @@ import {
   jsonb,
   pgTable,
   text,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
@@ -54,10 +55,10 @@ export const templates = pgTable(
     version: integer('version').notNull().default(1),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: createdAt(),
-    createdBy: authorName(),
+    createdBy: authorName('created_by'),
   },
   (t) => [
-    uniqueIndex('templates_run_id_key').on(t.runId, t.id),
+    unique('templates_run_id_key').on(t.runId, t.id),
     uniqueIndex('templates_active_character')
       .on(t.runId, t.chapterId, t.characterId)
       .where(sql`${t.isActive} and ${t.kind} = 'postava'`),

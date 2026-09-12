@@ -7,7 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { authorName, createdAt } from './_shared'
@@ -46,9 +46,9 @@ export const questions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('questions_run_id_key').on(t.runId, t.id),
-    uniqueIndex('questions_run_external_key').on(t.runId, t.externalId),
-    uniqueIndex('questions_character_ordinal_key').on(
+    unique('questions_run_id_key').on(t.runId, t.id),
+    unique('questions_run_external_key').on(t.runId, t.externalId),
+    unique('questions_character_ordinal_key').on(
       t.runId,
       t.chapterId,
       t.characterId,
@@ -110,9 +110,9 @@ export const answerOptions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('answer_options_run_id_key').on(t.runId, t.id),
-    uniqueIndex('answer_options_run_external_key').on(t.runId, t.externalId),
-    uniqueIndex('answer_options_question_ordinal_key').on(t.runId, t.questionId, t.ordinal),
+    unique('answer_options_run_id_key').on(t.runId, t.id),
+    unique('answer_options_run_external_key').on(t.runId, t.externalId),
+    unique('answer_options_question_ordinal_key').on(t.runId, t.questionId, t.ordinal),
     foreignKey({
       name: 'answer_options_question_fk',
       columns: [t.runId, t.questionId],
@@ -159,7 +159,7 @@ export const answers = pgTable(
      * co přišlo od hráče a co vyklikal game master.
      */
     filledByOrg: boolean('filled_by_org').notNull().default(false),
-    answeredBy: authorName(),
+    answeredBy: authorName('answered_by'),
     answeredAt: timestamp('answered_at', { withTimezone: true, mode: 'date' })
       .notNull()
       .defaultNow(),
@@ -167,8 +167,8 @@ export const answers = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('answers_unique').on(t.runId, t.chapterId, t.characterId, t.questionId),
-    uniqueIndex('answers_run_id_key').on(t.runId, t.id),
+    unique('answers_unique').on(t.runId, t.chapterId, t.characterId, t.questionId),
+    unique('answers_run_id_key').on(t.runId, t.id),
     foreignKey({
       name: 'answers_chapter_fk',
       columns: [t.runId, t.chapterId],
@@ -200,7 +200,7 @@ export const answerSelectedOptions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
-    uniqueIndex('answer_selected_options_unique').on(t.runId, t.answerId, t.answerOptionId),
+    unique('answer_selected_options_unique').on(t.runId, t.answerId, t.answerOptionId),
     foreignKey({
       name: 'answer_selected_options_answer_fk',
       columns: [t.runId, t.answerId],
