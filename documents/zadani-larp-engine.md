@@ -13,7 +13,6 @@ LARP má **3 kapitoly** oddělené časovými skoky (roky života postav). Na ko
 Dnes se to dělá ručně v tabulkách. Při **23 postavách ve dvou souběžných bězích** je to neúnosné a chybové.
 
 **Cílem je nástroj, který:**
-
 1. Sesbírá odpovědi na konci kapitoly.
 2. Deterministicky přepočítá vnitřní stav každé postavy (škály, příznaky, členství ve skupinách).
 3. Vygeneruje editovatelný mezivýstup (JSON) a z něj tisknutelné dokumenty pro hráče.
@@ -65,16 +64,15 @@ založen → aktivní → [kapitola 1 vydána] → [kapitola 2 vydána] → [kap
 
 **Stavy kapitoly [ROZHODNUTO]:**
 
-| Stav           | Význam                                    | Lze editovat?                     |
-| -------------- | ----------------------------------------- | --------------------------------- |
-| `rozpracovaná` | Sbírají se odpovědi                       | Ano, volně                        |
-| `spočítaná`    | Přepočet proběhl, výstup existuje         | Ano, přepočet lze opakovat        |
-| `vydaná`       | Dokumenty jsou vytištěné a rozdané hráčům | Ano, ale s odůvodněním (viz níže) |
+| Stav | Význam | Lze editovat? |
+|---|---|---|
+| `rozpracovaná` | Sbírají se odpovědi | Ano, volně |
+| `spočítaná` | Přepočet proběhl, výstup existuje | Ano, přepočet lze opakovat |
+| `vydaná` | Dokumenty jsou vytištěné a rozdané hráčům | Ano, ale s odůvodněním (viz níže) |
 
 **Uzamčení není definitivní [ROZHODNUTO].** Nic se nikdy nezamyká nevratně. Stav `vydaná` je **měkká pojistka proti překlepu**, ne zámek — chrání před nechtěnou změnou kapitoly, jejíž papíry už drží hráči v ruce.
 
 Editace vydané kapitoly:
-
 - Vyžaduje **potvrzení a důvod** (volný text), obojí do auditu.
 - Nikdy se nic nepřepisuje destruktivně. Předchozí výsledek přepočtu zůstává uložený jako verze.
 
@@ -102,7 +100,6 @@ Dva běhy poběží současně a **jejich data se nesmí potkat**.
 **Na úrovni UI** — a tohle je důležitější, než se zdá: protože se všichni hlásí stejným heslem, aplikace nepozná z přihlášení, kdo v jakém běhu pracuje. Riziko, že org zapíše odpovědi z běhu A do běhu B, je reálné a jeho následky se špatně opravují.
 
 Opatření:
-
 1. **Přepínač běhu trvale viditelný v hlavičce**, na každé obrazovce.
 2. **Odlišná barva rozhraní pro každý běh** (A modrá, B jantarová). Nejlevnější a nejúčinnější pojistka — pozná se periferním viděním.
 3. **Potvrzovací dialog u zásadních akcí** (přepočet, vydání kapitoly, export) vždy **jmenuje běh**: „Uzamknout kapitolu 2 běhu **2026-09-12_B**?"
@@ -137,18 +134,18 @@ Zdrojem konfigurace je Google Sheet s tabulkami (per kapitola):
 - `1_Scales`, `2_Scales`, `3_Scales` — definice škál včetně prahů pásem
 - `2_Content`, `3_Content` — textové bloky / šablony
 - `Validations` — kontrolní pravidla
-- **`N_Rules` a `N_Conditions`** _(doplnit do tabulky)_ — pravidla enginu, viz §4.5
-- **`Characters`** _(doplnit do tabulky)_ — minimální registr postav: ID, jméno, příjmení, skupina, ID šablony dokumentu a **počáteční hodnoty škál pro kapitolu 1**. Nic víc.
+- **`N_Rules`** *(nepovinný, možná nebude potřeba)* — pravidla enginu, viz §4.5
+- **`Characters`** *(doplnit do tabulky)* — minimální registr postav: ID, jméno, příjmení, skupina, ID šablony dokumentu a **počáteční hodnoty škál pro kapitolu 1**. Nic víc.
 
 **Postavy se v aplikaci nepopisují [ROZHODNUTO].** Vše, co engine potřebuje k rozhodnutí o vývoji postavy, plyne **výhradně z odpovědí na otázky a ze škál**. Charakterizace postavy (povaha, minulost, fixní rysy typu „závislý na piku") žije v **pevných odstavcích šablony Google Docu**, kterých se engine nikdy nedotkne — není to datový model.
 
 **Konvence ID (dodržet):**
 
-| Typ     | Vzor                                        | Příklad             |
-| ------- | ------------------------------------------- | ------------------- |
-| Otázka  | `Q_<Postava><Kapitola>_<Poradi>`            | `Q_Marie1_1`        |
+| Typ | Vzor | Příklad |
+|---|---|---|
+| Otázka | `Q_<Postava><Kapitola>_<Poradi>` | `Q_Marie1_1` |
 | Odpověď | `A_<Postava>_<Kapitola>_<Otazka>_<Hodnota>` | `A_Marie_1_1_Karel` |
-| Škála   | `S_<Postava>_<Skala>`                       | `S_Marie_Wealth`    |
+| Škála | `S_<Postava>_<Skala>` | `S_Marie_Wealth` |
 
 **Formát sloupce dopadu na škály:** čárkou oddělený seznam `<ScaleID><znaménko><číslo>`, např. `S_Marie_Wealth+3, S_Marie_Regime-2`. Prázdná buňka = žádný dopad.
 
@@ -161,6 +158,7 @@ Stav se **ukládá jako snapshot po každé kapitole**, nikdy se nepřepisuje. H
 
 ---
 
+
 ### 4.4 Domácnosti a sdílené škály [ROZHODNUTO]
 
 Některé postavy sdílejí majetek — manželé mají společný účet. Sdílené hodnoty nesmí být řešené kopírováním mezi postavami; potřebují vlastního vlastníka.
@@ -169,9 +167,9 @@ Některé postavy sdílejí majetek — manželé mají společný účet. Sdíl
 
 **Škála má v definici (`N_Scales`) uvedený rozsah platnosti:**
 
-| Rozsah      | Význam                                                      | Příklad                             |
-| ----------- | ----------------------------------------------------------- | ----------------------------------- |
-| `postava`   | Hodnota patří jedné postavě                                 | `Regime`, `Control`                 |
+| Rozsah | Význam | Příklad |
+|---|---|---|
+| `postava` | Hodnota patří jedné postavě | `Regime`, `Control` |
 | `domácnost` | Hodnota patří domácnosti, všichni členové čtou a mění tutéž | `Wealth`, `Bony`, firemní byt, auto |
 
 Postava bez domácnosti (svobodná) drží hodnotu domácnostní škály sama — technicky je to domácnost o jednom členovi. Tím odpadá zvláštní větev v kódu.
@@ -196,9 +194,9 @@ Obojí je **efekt pravidla**, ne ruční operace.
 
 Manželé mohou mít **obojí** — vlastní peníze i společný účet. Model to zvládá bez jakéhokoli rozšíření: **jsou to dvě samostatné škály s různým rozsahem platnosti**, ne jedna škála přepínaná do sdíleného režimu.
 
-| Škála             | Rozsah      | Kdo ji vlastní                            |
-| ----------------- | ----------- | ----------------------------------------- |
-| `Wealth_osobni`   | `postava`   | Každá postava svou                        |
+| Škála | Rozsah | Kdo ji vlastní |
+|---|---|---|
+| `Wealth_osobni` | `postava` | Každá postava svou |
 | `Wealth_spolecny` | `domácnost` | Domácnost, čtou a mění ji všichni členové |
 
 Doporučená konvence pojmenování: přípona `_osobni` / `_spolecny`, aby se v tabulce nedaly splést.
@@ -220,51 +218,42 @@ Doporučená konvence pojmenování: přípona `_osobni` / `_spolecny`, aby se v
 Sdílené škály jsou **největší riziko pro princip „žádný black box"** (§2). Mariiny peníze se změní, aniž by to šlo vysvětlit z jejích odpovědí.
 
 Proto:
-
 1. Trace u sdílené škály **vždy uvádí, od koho změna přišla**: „−3 Wealth, zdroj: odpověď Mirka Pokorného na Q_Mirek2_1".
 2. V detailu postavy je u sdílené škály **viditelná značka** „společný účet s Mirkem Pokorným" a odkaz na druhou postavu.
 3. Dokument postavy může odkázat na sdílenou hodnotu běžnou proměnnou; z pohledu šablony není rozdíl.
 
 ---
 
+
 ### 4.5 Kde jsou pravidla [ROZHODNUTO]
 
-Logika je rozdělená do **tří vrstev**. Naprostá většina obsahu patří do vrstvy 1 a 2 — vrstva 3 je až na to, co jinak nejde vyjádřit.
+**Rozhodující zjištění z reálného listu `2_Content`:** autor hry už podmínky píše jako **výrazy v jedné buňce**, například `A_Marie1_1_Karel AND !(A_Marie_2_3_Postava2 OR A_Marie_2_3_Postava3)`. Dřívější návrh na rozepsání podmínek do strukturovaných sloupců v samostatném listu se tím **ruší** — autor hlasoval tím, jak tabulku píše, a rozepisovat tohle do řádků by bylo výrazně horší na psaní i na čtení.
 
-**Vrstva 1 — dopad odpovědi na škály.** Existuje už dnes: sloupec `Scale Impact` v `N_Questions`, formát `S_Marie_Wealth+3, S_Marie_Regime-2`. Pokrývá běžný případ „odpověď posune čísla".
+**Podmínky jsou výrazy. Parser se nepíše, použije se knihovna** (`jsep` nebo `expr-eval`) a nad jejím stromem se napíše vlastní vyhodnocení. Vlastní gramatiku nepsat ani teď.
 
-**Vrstva 2 — odpověď vybírá bloky.** Nový sloupec `Blocks` u odpovědi v `N_Questions`: čárkou oddělený seznam ID bloků (`MARIE_SVATBA`), které tahle odpověď zapíná v šabloně (§8.4). Také nový sloupec `Flags` pro příznaky (`Svatba`, `Firemni_byt`).
+#### Jazyk podmínek
 
-Tím je pokryté „odpověď → text + příznak" bez jediného pravidla. **Autor hry tak většinu hry napíše, aniž by se dotkl enginu.**
+| Prvek | Zápis | Význam |
+|---|---|---|
+| Odpověď | `A_Marie1_1_Karel` | Postava odpověděla takto |
+| Negace | `!A_Marie1_1_Karel` | Neodpověděla |
+| Spojky | `AND`, `OR` | Logické spojení |
+| Závorky | `( )` | Priorita vyhodnocení |
+| Škála | `S_Marie_Wealth >= 7` | Porovnání, operátory `=`, `!=`, `>`, `<`, `>=`, `<=` |
+| Příznak | `F_Svatba` | Příznak je nastaven |
+| Náhoda | `RANDOM(50)` | Pravděpodobnost v procentech, hod se ukládá (§7.4) |
+| Výchozí | `DEFAULT` | Vždy pravdivé, použije se, když neprojde nic jiného |
 
-**Vrstva 3 — pravidla.** Dva nové listy, per kapitola:
+#### Kde podmínky žijí
 
-`N_Rules` — jedno pravidlo na řádek:
+| Vrstva | Kde | K čemu |
+|---|---|---|
+| 1 | Sloupec `Scale Impact` v `N_Questions` | Odpověď posune škály |
+| 2 | Sloupce `Flags` a `Effects` v `N_Questions` | Odpověď nastaví příznak, vyvolá sňatek, změní vedení skupiny |
+| 3 | Sloupce `Priority` a `Conditions` v `N_Content` | **Která varianta bloku se použije** — viz §8.2 |
+| 4 | `N_Rules` *(nepovinné)* | Logika, která nepatří k jedné odpovědi ani k jednomu bloku |
 
-| Sloupec             | Význam                                                                    |
-| ------------------- | ------------------------------------------------------------------------- |
-| `RuleID`            | Identifikátor                                                             |
-| `Popis`             | Lidsky čitelný popis, zobrazuje se v trace                                |
-| `Efekt`             | Co se stane: změna škály, příznak, blok, členství, vznik/zánik domácnosti |
-| `Priorita`          | Vyšší vyhrává při konfliktu (§7.3)                                        |
-| `Váha`              | Násobitel příspěvku                                                       |
-| `Vyloučení`         | Ano/Ne — pravidlo místo přiřazení zakazuje (negace)                       |
-| `JednouZaDomácnost` | Ano/Ne (§4.4)                                                             |
-
-`N_Conditions` — podmínky, **jedna na řádek**, odkazují na `RuleID`:
-
-| Sloupec    | Význam                            |
-| ---------- | --------------------------------- |
-| `RuleID`   | Ke kterému pravidlu patří         |
-| `Subjekt`  | Odpověď, škála, příznak, členství |
-| `Operátor` | `=`, `≠`, `>`, `<`, `obsahuje`    |
-| `Hodnota`  | S čím se porovnává                |
-| `Spojka`   | `A` / `NEBO`                      |
-| `Skupina`  | Číslo pro závorkování             |
-
-Dva listy místo jednoho proto, že pravidlo má proměnný počet podmínek. Naskládat je do sloupců v jednom řádku by omezilo složitost a rozbilo se to při první podmínce navíc.
-
-**Podmínky se nikdy neparsují z volného textu.** Žádný vlastní jazyk výrazů (§15).
+**Vrstva 4 nemusí v první verzi vzniknout vůbec.** Reálný list ukazuje, že většinu rozhodování nese vrstva 3 přímo u textu, kterého se týká. Založ `N_Rules` až ve chvíli, kdy narazíš na něco, co se jinam nevejde — do té doby je to prázdná struktura navíc.
 
 ### 4.6 Text není stav [ROZHODNUTO]
 
@@ -307,13 +296,13 @@ Krok [4] musí jít spustit **opakovaně a nedestruktivně** (dry-run) — org s
 
 ### 6.1 Typy otázek [ROZHODNUTO]
 
-| Typ            | Popis                                                                          |
-| -------------- | ------------------------------------------------------------------------------ |
-| `bool`         | Ano / Ne                                                                       |
-| `single`       | Výběr jedné hodnoty ze seznamu (např. „Kdo ze 3 osob se stal vedoucím směny?") |
-| `multi`        | Výběr více hodnot ze seznamu                                                   |
-| `scale_direct` | Přímé zadání čísla na škále (např. „Kolik máš na spořáku?")                    |
-| `text`         | Volný text (`_OTHER_`), nevstupuje do výpočtu, jen do dokumentů                |
+| Typ | Popis |
+|---|---|
+| `bool` | Ano / Ne |
+| `single` | Výběr jedné hodnoty ze seznamu (např. „Kdo ze 3 osob se stal vedoucím směny?") |
+| `multi` | Výběr více hodnot ze seznamu |
+| `scale_direct` | Přímé zadání čísla na škále (např. „Kolik máš na spořáku?") |
+| `text` | Volný text (`_OTHER_`), nevstupuje do výpočtu, jen do dokumentů |
 
 **Explicitně NEIMPLEMENTOVAT:** podmíněné podotázky („pokud X → zobraz podotázku Y"). Autoři je vědomě vyškrtli. Dotazník je plochý.
 
@@ -330,7 +319,6 @@ Krok [4] musí jít spustit **opakovaně a nedestruktivně** (dry-run) — org s
 Když postava nedodá odpověď (hráč nedorazil, ztracený papír), **game master dotazník vyklikne ručně** podle toho, jaký outcome chce.
 
 Důsledky:
-
 - Přepočet kapitoly **nelze spustit**, dokud nejsou zodpovězené všechny otázky. Aplikace vypíše seznam chybějících.
 - Odpověď doplněná orgem se v auditu označí příznakem „doplněno orgem", aby šlo po hře poznat, co přišlo od hráče a co ne.
 - Žádné tiché doplňování hodnot na pozadí. Nikdy.
@@ -342,21 +330,18 @@ Důsledky:
 Důvod, proč je detail postavy správně: org přepisuje **jeden papírový dotazník po druhém**. Rozvržení, kde je na obrazovce právě ta postava, jejíž papír má org v ruce, odpovídá skutečnému postupu práce. Mřížka by ho nutila hledat řádek a hlídat, že píše do správného. Při 23 postavách navíc mřížka nic neušetří — vyhrála by až u stovek řádků.
 
 **Horní lišta**
-
 - Přepínač běhu, **barevně odlišený** (§3.3).
 - Kapitoly 1 / 2 / 3 se stavem (`rozpracovaná` / `spočítaná` / `vydaná`).
 - Sekce, **pět** [ROZHODNUTO]: **Postavy · Skupiny · Přepočet · Výstupy · Správa**.
 - Vpravo jméno z pole „Kdo jsi?" (§3.1).
 
 **Levý panel — seznam postav**
-
 - Jméno, skupina a **indikátor vyplněnosti**: nevyplněno / rozpracováno / hotovo. Barva plus tvar, ne jen barva.
 - Nahoře souhrn: **„Vyplněno 14 / 23"**.
 - Hledání podle jména a filtr „jen nevyplněné".
 - Panel si drží pozici při přepínání postav — org projíždí seznam shora dolů.
 
 **Hlavní plocha**
-
 - Dotazník vybrané postavy: ~3 otázky, každá se svým typem ovládání (§6.1).
 - Pod dotazníkem aktuální stav škál postavy, ať je vidět kontext. U sdílených škál značka, s kým jsou sdílené (§4.4).
 - **Automatické ukládání** po každé změně, s viditelným potvrzením. Žádné tlačítko „Uložit", na které se dá zapomenout.
@@ -364,12 +349,11 @@ Důvod, proč je detail postavy správně: org přepisuje **jeden papírový dot
 - U odpovědi doplněné orgem (§6.3) viditelná značka „doplněno orgem".
 
 **Ostatní sekce**
-
 - **Skupiny** — členové, vedení, stav skupiny.
 - **Přepočet** — spuštění, konflikty k rozhodnutí (§7.3), náhled změn s trace „proč" (§7.5).
 - **Výstupy** — dvě záložky nad jedním výsledkem přepočtu:
-  - _Přehled_ — stavy škál a pásma všech postav. Tady tabulka smysl dává.
-  - _Dokumenty_ — vygenerované `.md`, tlačítko „Kopírovat do schránky" (§10.5), stažení zipu.
+  - *Přehled* — stavy škál a pásma všech postav. Tady tabulka smysl dává.
+  - *Dokumenty* — vygenerované `.md`, tlačítko „Kopírovat do schránky" (§10.5), stažení zipu.
 - **Správa** — nahrání `.xlsx` a šablon, verze konfigurace, výsledky validací (§11), audit log. Věci, které se nedělají denně.
 
 Sedm sekcí bylo zvažováno a **sloučeno na pět**. Výsledky a Dokumenty jsou dva pohledy na jeden výstup; Konfigurace a Audit jsou obojí správa, ne denní práce. Lišta se sedmi položkami se navíc nevejde do rozumné šířky.
@@ -388,7 +372,6 @@ Aplikace **smí být hezká a mít lehkou retro stylizaci** odkazující na pros
 Neexistuje sdílená sada otázek. **Každá z 23 postav má vlastní ~3 otázky na kapitolu** (~69 otázek na kapitolu, ~207 na celou hru).
 
 Důsledky pro implementaci:
-
 - Otázka je vždy navázaná na konkrétní postavu (viz konvence ID `Q_Marie1_1`).
 - Volby odpovědí často odkazují na **jiné postavy** („Karel", „Mirek"). Musí odkazovat na **ID postavy z registru**, ne na volný text — jinak se po sňatku nebo přejmenování rozpadne provázání (§8.8).
 - Autorský objem je velký a ručně psaný → kontroly konzistence (§11) jsou o to důležitější.
@@ -399,10 +382,10 @@ Některá rozhodnutí nedělají hráči, ale orgové mezi kapitolami — typick
 
 **Otázka má proto v `N_Questions` sloupec `Zdroj`:**
 
-| Hodnota | Význam                                                            |
-| ------- | ----------------------------------------------------------------- |
-| `hráč`  | Výchozí. Objeví se ve vytištěném dotazníku, hráč ji vyplní.       |
-| `org`   | **Do dotazníku pro hráče se netiskne.** Vyplní ji org v aplikaci. |
+| Hodnota | Význam |
+|---|---|
+| `hráč` | Výchozí. Objeví se ve vytištěném dotazníku, hráč ji vyplní. |
+| `org` | **Do dotazníku pro hráče se netiskne.** Vyplní ji org v aplikaci. |
 
 Jinak se organizátorská otázka chová úplně stejně jako hráčská: stejné typy (§6.1), stejné dopady na škály, stejné zapínání bloků a příznaků, stejná pravidla. **Je to jen jiný zdroj vstupu, ne jiný mechanismus** — engine mezi nimi nerozlišuje.
 
@@ -423,7 +406,6 @@ Sňatek se týká dvou postav. **Zadává se ale jen jednou.**
 Otázka nese příznak **`párová`**. Její odpověď odkazuje na ID jiné postavy (§6.6) a aplikace tutéž odpověď **zobrazí i u té druhé postavy, provázanou** — změna na jedné straně se okamžitě projeví na druhé. V datech existuje **jedna odpověď**, ne dvě zrcadlené.
 
 Důsledky:
-
 - **Odpadá celá třída konfliktů.** Oboustranné potvrzení s hlášením nesouladu není potřeba — nesoulad nemůže vzniknout, když je odpověď jen jedna.
 - Zůstává jiná kontrola: **postava smí být cílem nejvýše jednoho sňatku v kapitole** a smí být nejvýše v jedné domácnosti (§4.4). Hlídá to validace (§11).
 - U provázané odpovědi je vidět, u které postavy byla zadaná.
@@ -465,7 +447,7 @@ Faktory mají různou váhu. Váha je číslo u pravidla nebo u dopadu odpovědi
 
 ### 7.3 Konflikty, negace, priority [ROZHODNUTO]
 
-- **Negace / vyloučení:** musí jít zapsat pravidlo typu _„pokud nastalo E a zároveň F, pak D nikdy nenastane"_. Vyloučení má vždy přednost před přiřazením.
+- **Negace / vyloučení:** musí jít zapsat pravidlo typu *„pokud nastalo E a zároveň F, pak D nikdy nenastane"*. Vyloučení má vždy přednost před přiřazením.
 - **Priorita:** každé pravidlo má prioritu. Při dvou protichůdných výsledcích vyhrává pravidlo s vyšší prioritou.
 - Pokud dvě pravidla se **stejnou** prioritou dají protichůdný výsledek, engine to **nevyřeší sám** — vyhodí to jako konflikt do UI a nechá rozhodnout orga.
 
@@ -496,8 +478,8 @@ Oboustranné potvrzení s hlášením nesouladu tím **odpadá** — nesoulad ne
 
 Model je jednoduchý: **hoď digitální kostkou a výsledek ulož jako data.**
 
-1. Pravidlo si vyžádá hod (např. k6). Aplikace vygeneruje číslo.
-2. Výsledek se **uloží k dané postavě, kapitole a pravidlu** jako běžná hodnota — stejně jako odpověď hráče.
+1. Výraz si vyžádá hod — funkce `RANDOM(50)` v podmínce znamená padesátiprocentní pravděpodobnost. Aplikace vygeneruje číslo.
+2. Výsledek se **uloží ke konkrétní postavě, kapitole a variantě bloku** jako běžná hodnota — stejně jako odpověď hráče.
 3. **Přepočet hod NEOPAKUJE.** Použije uložené číslo. Přehodit lze jen výslovnou akcí orga („Přehodit"), která se zapíše do auditu včetně staré hodnoty.
 4. Org může hozené číslo ručně přepsat. I to jde do auditu.
 
@@ -509,7 +491,7 @@ Tím je dohledatelnost splněná bez jakéhokoli seedování — v datech prost�
 
 Logika algoritmu musí být **human-readable**. Pravidla se v UI zobrazují v přirozeném jazyce, ne jako kód. Např.:
 
-> _„Protože Marie odpověděla ‚Karel' na Q_Marie1_1 (+3 Wealth) a je členkou Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."_
+> *„Protože Marie odpověděla ‚Karel' na Q_Marie1_1 (+3 Wealth) a je členkou Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."*
 
 ---
 
@@ -521,56 +503,56 @@ Aplikace **negeneruje PDF ani nefinalizuje sazbu**. Cílové dokumenty žijí ja
 
 Úkolem aplikace je dokument **naplnit**, ne vysázet.
 
-### 8.2 Model naplnění: mazání, ne vkládání [ROZHODNUTO]
+### 8.2 Bloky a jejich varianty [ROZHODNUTO]
 
-Šablona dokumentu obsahuje **všechny možné varianty odstavců zároveň**. Aplikace nevkládá text — **maže ty varianty, které engine nevybral.**
+**Upraveno podle reálného listu `2_Content`.** Původní návrh počítal s tím, že všechny varianty textu jsou přímo v šabloně a nevybrané se mažou. Autor hry to ale píše jinak a lépe: **varianty textu žijí v tabulce**, šablona obsahuje jen značku.
 
-Proč takhle:
+Struktura listu `N_Content`:
 
-- Formátování je už v dokumentu hotové a mazáním se nepoškodí. Odpadá celý problém s vkládáním stylovaného textu.
-- Autor vidí v šabloně všechny větve pohromadě a píše je v Google Docs, ne v aplikaci.
-- Aplikace nemusí umět sazbu. Umí jen rozhodnout, co zůstane.
+| Sloupec | Význam |
+|---|---|
+| `Character` | Které postavy se blok týká. Vyplněno jen na prvním řádku skupiny. |
+| `Block ID` | Identifikátor bloku, např. `B_Marie_1_Historie_1`. Vyplněno jen na prvním řádku. |
+| `Variation ID` | Identifikátor varianty, např. `V_Marie_1_Historie_1_A` |
+| `Variation Description` | Poznámka autora, do výstupu nejde |
+| `Variation Text` | Text, který se vloží do dokumentu. Smí být prázdný — varianta „nic se nestalo". |
+| `Priority` | Pořadí vyhodnocení, nižší číslo dřív |
+| `Conditions` | Výraz, §4.5 |
 
-### 8.3 Postup naplnění [ROZHODNUTO]
+**Vyhodnocení bloku:** varianty se procházejí **vzestupně podle `Priority`** a použije se **první, jejíž podmínka platí**. Varianta s podmínkou `DEFAULT` je vždy pravdivá, takže stojí poslední a zaručuje, že blok vždy něco vrátí.
 
-Primární cesta jde přes **Markdown** a funguje i offline:
+Z toho plyne: **žádné konflikty mezi variantami nevznikají.** Priorita je rozhoduje úplně, engine nemusí nic hlásit orgovi.
+
+### 8.3 Naplnění dokumentu [ROZHODNUTO]
+
+Šablona je Markdown se značkami. Aplikace v ní **nahradí značky textem vybraných variant** a proměnné hodnotami.
 
 ```
 [1] Org stáhne šablonu z Google Docu jako Markdown a nahraje do aplikace
 [2] Aplikace zpracuje text:
-      - smaže nevybrané bloky
-      - smaže značky u vybraných bloků
+      - u každé značky {BLOK B_...} vybere variantu podle priority a podmínek
+      - vloží její Variation Text (prázdný text = značka zmizí beze stopy)
       - nahradí proměnné ({PRIJMENI} apod.)
 [3] Org stáhne výsledek (zip) nebo použije „Kopírovat do schránky"
 [4] Vloží do cílového Google Docu přes „Vložit z Markdownu"
 [5] Doedituje a vytiskne z Googlu
 ```
 
-Krok [2] je obyčejná práce s textem — žádné Google API, žádná index matematika. **To je hlavní důvod, proč je tahle cesta lepší než úpravy dokumentu přes API.**
+Vkládání textu nevadí, protože celý dokument je v té chvíli obyčejný Markdown a formátování řeší až vložení do Google Docu (§8.5). Původní obava z poškození formátování se týkala úprav přes Google API, které nepoužíváme.
 
 ### 8.4 Značky v šabloně [ROZHODNUTO]
 
-Bloky jsou **párové**, aby šlo poznat, kde blok končí:
+| Značka | Význam |
+|---|---|
+| `{BLOK <Block ID>}` | Nahradí se textem vybrané varianty z `N_Content` |
+| `{JMENO}`, `{PRIJMENI}`, `{VEK}`, `{SKUPINA}` | Proměnná, nahradí se hodnotou ze stavu postavy |
 
-```
-{BLOK MARIE_SVATBA}
-1985  v květnu si bere Mirka Pokorného, přijímá příjmení {PRIJMENI}
-{/BLOK}
-```
-
-| Značka                                        | Význam                                                                                        |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `{BLOK <ID>}` … `{/BLOK}`                     | Podmíněný blok. Vybraný → smažou se jen značky. Nevybraný → smaže se celý blok včetně značek. |
-| `{JMENO}`, `{PRIJMENI}`, `{VEK}`, `{SKUPINA}` | Proměnná, nahradí se hodnotou ze stavu postavy.                                               |
+Značky jsou **jednoduché, nepárové** — text nese tabulka, ne šablona.
 
 Pravidla:
-
 - **Žádná značka nesmí přežít do výsledného dokumentu.** Zbylá značka = chyba, aplikace ji nahlásí před uložením.
-- Nespárovaná značka = chyba validace (§11). **Vnořené bloky nepodporovat.**
-- Blok, o kterém engine nic neví, i blok očekávaný enginem a chybějící v šabloně = chyba validace.
-- Text mimo značky je fixní a aplikace se ho nedotkne.
-
-Struktura dokumentu postavy (podle ukázky `Marie Balážová`): hlavička se jménem a ročníkem, sekce **Životopis** (chronologické záznamy po letech), sekce **Zlomové body**.
+- Blok, který je v šabloně a chybí v `N_Content`, i blok v `N_Content`, na který nevede značka = chyba validace (§11).
+- Text mimo značky je fixní část šablony a aplikace se ho nedotkne. Sem patří charakterizace postavy, která se nemění (§4.6).
 
 ### 8.5 Round-trip: ověřeno [OVĚŘENO]
 
@@ -587,7 +569,6 @@ Ruční „Vložit z Markdownu" v editoru a **programové nahrání přes Drive 
 **Ruční vložení jako oficiální záložní režim [ROZHODNUTO]**
 
 Právě ověřený ruční postup je plnohodnotná záložní cesta, ne nouzovka:
-
 - Aplikace vždy umí vyprodukovat hotový `.md` soubor pro každou postavu — čistě lokálně, bez sítě.
 - Org ho v nejhorším vloží do dokumentu ručně přes „Vložit z Markdownu".
 - 23 postav × pár sekund = pár minut práce.
@@ -604,8 +585,7 @@ Právě ověřený ruční postup je plnohodnotná záložní cesta, ne nouzovka
 ### 8.7 Vlaječky / tagy [ROZHODNUTO]
 
 Engine umí vygenerovat jednoduchý tag pro orga typu:
-
-> _„Nastala událost X → vytáhni dokument č. 42, ne č. 28."_
+> *„Nastala událost X → vytáhni dokument č. 42, ne č. 28."*
 
 Jde o strojově čitelný signál pro fyzické materiály připravené mimo systém.
 
@@ -637,7 +617,6 @@ Google Docs   --stáhnout .md--->             (vložit z Markdownu)
 ```
 
 Co tím odpadá — a je to hodně:
-
 - Service account, projekt v Google Cloud, klíče, `supportsAllDrives`.
 - Fronta operací pro offline režim (celý subsystém, který by se musel napsat a odladit).
 - Riziko, že se aplikace na hře zablokuje na síti.
@@ -649,15 +628,15 @@ Co tím odpadá — a je to hodně:
 
 ### 10.2 Vstup: konfigurace
 
-**Primárně jeden `.xlsx` soubor.** Google Sheet se stáhne přes _Soubor → Stáhnout → Microsoft Excel_, což zachová **všechny listy v jednom souboru**. Nahraje se do aplikace jedním přetažením.
+**Primárně jeden `.xlsx` soubor.** Google Sheet se stáhne přes *Soubor → Stáhnout → Microsoft Excel*, což zachová **všechny listy v jednom souboru**. Nahraje se do aplikace jedním přetažením.
 
-_(Nahrání jednotlivých `.csv` je záložní cesta. Deset listů = deset souborů, což je zbytečně otravné. Aplikace to umí, ale nedoporučuje.)_
+*(Nahrání jednotlivých `.csv` je záložní cesta. Deset listů = deset souborů, což je zbytečně otravné. Aplikace to umí, ale nedoporučuje.)*
 
 Po importu je zdrojem pravdy databáze aplikace. Opakovaný import = nová verze konfigurace (§6.5) s diffem proti předchozí. Chybná konfigurace nesmí aplikaci shodit — vypíše se seznam chyb s odkazem na řádek a list.
 
 ### 10.3 Vstup: šablony dokumentů
 
-Šablony jsou Google Docs se značkami (§8.4). Do aplikace se dostanou jako **Markdown soubory**: _Soubor → Stáhnout → Markdown_, pak nahrát do aplikace (víc souborů najednou nebo v zipu).
+Šablony jsou Google Docs se značkami (§8.4). Do aplikace se dostanou jako **Markdown soubory**: *Soubor → Stáhnout → Markdown*, pak nahrát do aplikace (víc souborů najednou nebo v zipu).
 
 Šablony se nahrávají **jednou za kapitolu**, ne pokaždé. Aplikace si je pamatuje a ukáže, které postavě která šablona patří a která chybí.
 
@@ -689,13 +668,11 @@ Aby to nebylo únavné, aplikace u každého dokumentu zobrazí **tlačítko „
 Až bude v1 funkční a odzkoušená, může přibýt přímé napojení jako **volitelné zrychlení**, ne jako náhrada. Souborová cesta zůstává navždy funkční — je to záložní režim pro případ, že síť nebo API selže.
 
 Co by fáze 2 přinesla:
-
 - Načtení konfigurace přímo z tabulky podle jejího ID.
 - Vytvoření složky běhu na Sdíleném disku a nahrání dokumentů.
 - Zápis výsledků zpět do tabulky.
 
 Technické podklady, až na to dojde:
-
 - Disk je **Sdílený disk (Shared Drive)** → autentizace přes **service account**, žádný OAuth. Soubory tam vlastní disk sám, takže chybějící kvóta service accountu nevadí.
 - Volání Drive API musí posílat `supportsAllDrives: true` a při hledání `includeItemsFromAllDrives: true`. Bez toho API Sdílený disk neuvidí a mlčky vrátí prázdno.
 - Nasdílenou tabulku lze číst i úplně bez přihlášení, přes veřejnou CSV export URL.
@@ -712,7 +689,11 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 3. Nedosažitelné pravidlo (podmínka nemůže nikdy nastat)
 4. Protichůdná pravidla se stejnou prioritou
 5. Textový blok, na který nevede žádná cesta / postava bez dokumentu
-6. Nespárovaná značka `{BLOK}` v šabloně, blok očekávaný enginem a chybějící v šabloně, nebo naopak (§8.4)
+6. Blok v šabloně bez odpovídajícího záznamu v `N_Content`, nebo blok v `N_Content`, na který nevede žádná značka (§8.4)
+6b. **Blok bez varianty `DEFAULT`** — hrozí, že neprojde žádná podmínka a blok nevrátí nic (§8.2)
+6c. **Syntakticky vadný výraz v `Conditions`** — chybějící závorka, neznámý operátor. V ukázkovém listu už jeden takový je: `!(A_Marie_2_3_Postava2 OR A_Marie_2_3_Postava3` bez uzavírací závorky.
+6d. **Odkaz ve výrazu na neexistující odpověď, škálu nebo příznak**
+6e. **Dvě varianty téhož bloku se stejnou `Priority`** — výsledek by závisel na pořadí řádků
 7. Postava ve více domácnostech zároveň, nebo cílem více než jednoho sňatku v kapitole (§6.7)
 8. Domácnostní škála bez definované strategie sloučení a rozdělení (§4.4)
 9. Žádná odpověď v kapitole nesahá na jeden z dvojice účtů `_osobni` / `_spolecny` — skoro jistě překlep v ID škály (§4.4)
@@ -730,24 +711,23 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 
 ## 13. Nefunkční požadavky
 
-| Požadavek             | Detail                                                                                                                                             |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Nasazení**          | Cloud s normální adresou (§18.1). Bez Dockeru, bez tajných klíčů.                                                                                  |
-| **Síťové závislosti** | V1 žádné mimo aplikaci samotnou (§10.1). Záložním režimem při výpadku je papír.                                                                    |
-| **Tisk**              | Řeší se v Google Docs, aplikace PDF negeneruje (§8.1).                                                                                             |
-| **Izolace běhů**      | 2 běhy současně. `run_id` v každé tabulce, datová vrstva ho vyžaduje povinně, barevné odlišení v UI (§3.3).                                        |
-| **Škála**             | 23 postav a 7 skupin na běh × 3 kapitoly. Přepočet celého běhu do jedné sekundy. Objem dat je malý — optimalizovat na srozumitelnost, ne na výkon. |
-| **Perzistence**       | Postgres (§18.1). Plný export dat do souborů.                                                                                                      |
-| **Audit log**         | Append-only. Kdy, co se změnilo, jaká byla hodnota před a po, které pravidlo to způsobilo.                                                         |
-| **Jazyk UI a dat**    | Čeština, včetně diakritiky v ID a exportech.                                                                                                       |
-| **Autentizace**       | Jedno sdílené heslo + nepovinné pole „Kdo jsi?" pro audit (§3.1).                                                                                  |
+| Požadavek | Detail |
+|---|---|
+| **Nasazení** | Cloud s normální adresou (§18.1). Bez Dockeru, bez tajných klíčů. |
+| **Síťové závislosti** | V1 žádné mimo aplikaci samotnou (§10.1). Záložním režimem při výpadku je papír. |
+| **Tisk** | Řeší se v Google Docs, aplikace PDF negeneruje (§8.1). |
+| **Izolace běhů** | 2 běhy současně. `run_id` v každé tabulce, datová vrstva ho vyžaduje povinně, barevné odlišení v UI (§3.3). |
+| **Škála** | 23 postav a 7 skupin na běh × 3 kapitoly. Přepočet celého běhu do jedné sekundy. Objem dat je malý — optimalizovat na srozumitelnost, ne na výkon. |
+| **Perzistence** | Postgres (§18.1). Plný export dat do souborů. |
+| **Audit log** | Append-only. Kdy, co se změnilo, jaká byla hodnota před a po, které pravidlo to způsobilo. |
+| **Jazyk UI a dat** | Čeština, včetně diakritiky v ID a exportech. |
+| **Autentizace** | Jedno sdílené heslo + nepovinné pole „Kdo jsi?" pro audit (§3.1). |
 
 ---
 
 ## 14. Rozsah MVP
 
 **V1 (musí být do prvního běhu) — bez jakéhokoli napojení na Google:**
-
 1. Import konfigurace z nahraného `.xlsx` + validace
 2. Nahrání šablon jako Markdown souborů
 3. Rozvržení aplikace a zadávání odpovědí (§6.4)
@@ -756,7 +736,6 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 6. JSON mezivýstup → editace → zip s `.md` dokumenty + „Kopírovat do schránky"
 
 **Fáze 2 (jen když zbude čas, nic z toho není nutné):**
-
 - Přímé napojení na Google Sheets a Drive (§10.6) jako volitelné zrychlení
 - Vizualizace vazeb
 - Pokročilé kontroly konzistence
@@ -768,17 +747,17 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 
 **Kontext:** jeden vývojář, umí React, ochoten se doučit. Deadline ~3 měsíce. Malý objem dat, offline provoz.
 
-| Vrstva             | Volba                                | Proč                                                                                                              |
-| ------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| **Framework**      | **Next.js** (App Router, TypeScript) | React, který vývojář zná, plus server v jednom procesu. Jeden příkaz na spuštění, žádné oddělené backendové repo. |
-| **Databáze**       | **Postgres** (Neon)                  | §18.1. **Přístup k datům drž za tenkou vrstvou**, aby se dal poskytovatel vyměnit bez přepisování aplikace.       |
-| **Přístup k DB**   | **Drizzle ORM** nebo prosté SQL      | Malé schéma, není potřeba nic těžkého.                                                                            |
-| **Import tabulky** | **SheetJS (`xlsx`)**                 | Přečte `.xlsx` i `.csv` bez konfigurace.                                                                          |
-| **Google API**     | **V1 se nepoužívá** (§10.1)          | Fáze 2. Až na to dojde: `googleapis` + service account.                                                           |
-| **Zip**            | `jszip` nebo `archiver`              | Sbalení výstupních `.md` a `.xlsx` do jednoho archivu.                                                            |
-| **PDF**            | **Neřeší se**                        | Tisk je v Google Docs (§8.1).                                                                                     |
-| **UI**             | Tailwind + jednoduché komponenty     | Klasické rozvržení s horní lištou a levým panelem (§6.4). Priorita: hustota informací a rychlost, ne efekt.       |
-| **Testy**          | **Vitest** — jen na engine pravidel  | Zbytek se testuje ručně, engine ne. Viz níže.                                                                     |
+| Vrstva | Volba | Proč |
+|---|---|---|
+| **Framework** | **Next.js** (App Router, TypeScript) | React, který vývojář zná, plus server v jednom procesu. Jeden příkaz na spuštění, žádné oddělené backendové repo. |
+| **Databáze** | **Postgres** (Neon) | §18.1. **Přístup k datům drž za tenkou vrstvou**, aby se dal poskytovatel vyměnit bez přepisování aplikace. |
+| **Přístup k DB** | **Drizzle ORM** nebo prosté SQL | Malé schéma, není potřeba nic těžkého. |
+| **Import tabulky** | **SheetJS (`xlsx`)** | Přečte `.xlsx` i `.csv` bez konfigurace. |
+| **Google API** | **V1 se nepoužívá** (§10.1) | Fáze 2. Až na to dojde: `googleapis` + service account. |
+| **Zip** | `jszip` nebo `archiver` | Sbalení výstupních `.md` a `.xlsx` do jednoho archivu. |
+| **PDF** | **Neřeší se** | Tisk je v Google Docs (§8.1). |
+| **UI** | Tailwind + jednoduché komponenty | Klasické rozvržení s horní lištou a levým panelem (§6.4). Priorita: hustota informací a rychlost, ne efekt. |
+| **Testy** | **Vitest** — jen na engine pravidel | Zbytek se testuje ručně, engine ne. Viz níže. |
 
 **Architektonické pravidlo (nejdůležitější v tomhle dokumentu):**
 Engine pravidel (§7) je **čistá funkce v TypeScriptu**, bez databáze, bez sítě, bez Reactu:
@@ -795,16 +774,16 @@ Díky tomu jde otestovat na desítkách scénářů bez rozjetí aplikace a `tra
 
 ### 15.1 Harmonogram (3 měsíce, jeden člověk)
 
-| Týdny | Cíl                                                                                   |
-| ----- | ------------------------------------------------------------------------------------- |
-| —     | ~~Test round-tripu (§8.5)~~ — **hotovo, prošlo.** Návrh výstupní vrstvy je potvrzený. |
-| 1–2   | Datové schéma + import tabulky + validace importu                                     |
-| 3–5   | Engine pravidel jako čistá funkce + testy. **Nejrizikovější část, dělej ji brzy.**    |
-| 6–7   | Rozvržení aplikace, seznam postav, zadávání odpovědí (§6.4)                           |
-| 8–9   | Trace „proč" + JSON mezivýstup + editace                                              |
-| 10    | Naplňování dokumentů — mazání bloků v Markdownu lokálně, bez Googlu                   |
-| 11    | Zip výstupu, „Kopírovat do schránky", kontroly konzistence                            |
-| 12    | Rezerva, zkušební průchod celou kapitolou na reálných datech                          |
+| Týdny | Cíl |
+|---|---|
+| — | ~~Test round-tripu (§8.5)~~ — **hotovo, prošlo.** Návrh výstupní vrstvy je potvrzený. |
+| 1–2 | Datové schéma + import tabulky + validace importu |
+| 3–5 | Engine pravidel jako čistá funkce + testy. **Nejrizikovější část, dělej ji brzy.** |
+| 6–7 | Rozvržení aplikace, seznam postav, zadávání odpovědí (§6.4) |
+| 8–9 | Trace „proč" + JSON mezivýstup + editace |
+| 10 | Naplňování dokumentů — mazání bloků v Markdownu lokálně, bez Googlu |
+| 11 | Zip výstupu, „Kopírovat do schránky", kontroly konzistence |
+| 12 | Rezerva, zkušební průchod celou kapitolou na reálných datech |
 
 **Zkušební průchod s reálnými daty naplánuj nejpozději na týden 12**, ne na den před hrou. Vizualizace (§12) do tohoto plánu nepatří — je to fáze 2.
 
@@ -812,25 +791,25 @@ Díky tomu jde otestovat na desítkách scénářů bez rozjetí aplikace a `tra
 
 ## 16. Zodpovězeno
 
-| #   | Otázka                    | Odpověď                                                                                                 |
-| --- | ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1   | Kdo zadává odpovědi?      | Vždy orgové. Jediná role, žádné hráčské účty.                                                           |
-| 2   | Vztah ke Google Workspace | **V1 žádný.** Komunikace přes soubory: `.xlsx` dovnitř, `.md` ven. Napojení až fáze 2 (§10.1).          |
-| 3   | Offline provoz            | Vyřešeno tím, že v1 nemá síťové závislosti. Při výpadku se píše na papír.                               |
-| 4   | Rozsah                    | 23 postav, 7 skupin, ~3 otázky na postavu a kapitolu.                                                   |
-| 5   | Výchozí hodnoty odpovědí  | Neexistují, vše se zadává ručně.                                                                        |
-| 6   | Škály                     | Celá čísla 1–10, clamp, 4 pásma (1–3 / 4–5 / 6–8 / 9–10) editovatelná v `N_Scales`.                     |
-| 7   | Otázky                    | Každá postava má vlastní otázky, žádná sdílená sada.                                                    |
-| 8   | Počáteční stav postav     | V tabulce, list `Characters`. Nic dalšího se o postavách nemodeluje.                                    |
-| 11  | PDF                       | Negeneruje se, tisk je v Google Docs.                                                                   |
-| 12  | Značky v šabloně          | Párové `{BLOK <ID>}`…`{/BLOK}` a `{PROMENNA}`. Nevybrané bloky se **mažou**, nic se nevkládá.           |
-| 14  | Round-trip přes Markdown  | **Otestováno, formátování se zachovalo.** Postup §8.3 platí.                                            |
-| 13  | Google disk               | **Sdílený disk (Shared Drive)** → ve fázi 2 autentizace přes service account, žádný OAuth.              |
-| 15  | Nasazení                  | Server od začátku (cloud, §18.1), aby bylo kam ve fázi 2 přidat Google. Varianta bez serveru zamítnuta. |
-| 16  | Přihlášení a běhy         | Sdílené heslo + pole „Kdo jsi?". Běh = `2026-09-12_A`, viz §3.1–3.3.                                    |
-| 17  | Uzamykání kapitol         | **Nikdy nevratné.** Měkká pojistka s odůvodněním, následující kapitoly se značí jako dotčené (§3.2).    |
-| 9   | Deadline                  | ~3 měsíce.                                                                                              |
-| 10  | Vývoj a údržba            | Jeden vývojář v týmu, React, ochoten se doučit. Stack viz §15.                                          |
+| # | Otázka | Odpověď |
+|---|---|---|
+| 1 | Kdo zadává odpovědi? | Vždy orgové. Jediná role, žádné hráčské účty. |
+| 2 | Vztah ke Google Workspace | **V1 žádný.** Komunikace přes soubory: `.xlsx` dovnitř, `.md` ven. Napojení až fáze 2 (§10.1). |
+| 3 | Offline provoz | Vyřešeno tím, že v1 nemá síťové závislosti. Při výpadku se píše na papír. |
+| 4 | Rozsah | 23 postav, 7 skupin, ~3 otázky na postavu a kapitolu. |
+| 5 | Výchozí hodnoty odpovědí | Neexistují, vše se zadává ručně. |
+| 6 | Škály | Celá čísla 1–10, clamp, 4 pásma (1–3 / 4–5 / 6–8 / 9–10) editovatelná v `N_Scales`. |
+| 7 | Otázky | Každá postava má vlastní otázky, žádná sdílená sada. |
+| 8 | Počáteční stav postav | V tabulce, list `Characters`. Nic dalšího se o postavách nemodeluje. |
+| 11 | PDF | Negeneruje se, tisk je v Google Docs. |
+| 12 | Značky v šabloně | Párové `{BLOK <ID>}`…`{/BLOK}` a `{PROMENNA}`. Nevybrané bloky se **mažou**, nic se nevkládá. |
+| 14 | Round-trip přes Markdown | **Otestováno, formátování se zachovalo.** Postup §8.3 platí. |
+| 13 | Google disk | **Sdílený disk (Shared Drive)** → ve fázi 2 autentizace přes service account, žádný OAuth. |
+| 15 | Nasazení | Server od začátku (cloud, §18.1), aby bylo kam ve fázi 2 přidat Google. Varianta bez serveru zamítnuta. |
+| 16 | Přihlášení a běhy | Sdílené heslo + pole „Kdo jsi?". Běh = `2026-09-12_A`, viz §3.1–3.3. |
+| 17 | Uzamykání kapitol | **Nikdy nevratné.** Měkká pojistka s odůvodněním, následující kapitoly se značí jako dotčené (§3.2). |
+| 9 | Deadline | ~3 měsíce. |
+| 10 | Vývoj a údržba | Jeden vývojář v týmu, React, ochoten se doučit. Stack viz §15. |
 
 ## 17. [OTEVŘENÉ] Zbývá doplnit
 
@@ -839,7 +818,7 @@ Nic blokujícího. Během implementace bude potřeba doladit:
 1. Přesné znění a strukturu listu `Characters` (zatím v tabulce neexistuje).
 2. Názvy pásem pro každou škálu zvlášť (prahy jsou dané, popisky ne).
 3. Konkrétní podobu šablon dokumentů — vzniknou při psaní obsahu kapitol.
-   Nic blokujícího nezbývá. Zadání je připravené k implementaci.
+Nic blokujícího nezbývá. Zadání je připravené k implementaci.
 
 ---
 
@@ -851,12 +830,12 @@ Protože v1 nemá žádnou síťovou závislost ani tajné klíče (§10.1), nas
 
 **Aplikace běží na běžném hostingu, orgové ji otevřou na normální adrese.** Žádné IP adresy, žádný terminál, žádné „musíš být na naší wifi". To je zásadní pro to, aby ji ostatní organizátoři vůbec chtěli používat.
 
-| Vrstva   | Volba                                                                                                                         |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Hosting  | **Vercel** — od tvůrců Next.js, nasazení propojením GitHub repa, `git push` = nasazeno. Nejblíž tomu, co znáš z GitHub Pages. |
-| Databáze | **Neon (Postgres)** — Vercel ho připojí na pár kliknutí, má free tier.                                                        |
+| Vrstva | Volba |
+|---|---|
+| Hosting | **Vercel** — od tvůrců Next.js, nasazení propojením GitHub repa, `git push` = nasazeno. Nejblíž tomu, co znáš z GitHub Pages. |
+| Databáze | **Neon (Postgres)** — Vercel ho připojí na pár kliknutí, má free tier. |
 
-**Proč ne SQLite ve Vercelu:** nemá trvalý disk, každé nasazení začíná s prázdným souborovým systémem. _(Alternativa se SQLite: **Fly.io** nebo **Railway** s připojeným diskem — levnější provoz, víc konfigurace.)_
+**Proč ne SQLite ve Vercelu:** nemá trvalý disk, každé nasazení začíná s prázdným souborovým systémem. *(Alternativa se SQLite: **Fly.io** nebo **Railway** s připojeným diskem — levnější provoz, víc konfigurace.)*
 
 **Přístup:** aplikace je na veřejném internetu, takže **jedno sdílené heslo je povinné**, ne volitelné.
 
@@ -867,7 +846,6 @@ Protože v1 nemá žádnou síťovou závislost ani tajné klíče (§10.1), nas
 Zvažován a **zamítnut**. Aplikace by běžela lokálně (`npm start`) a ostatní by se připojovali přes IP notebooku v lokální síti, s SQLite místo Postgresu.
 
 Důvody zamítnutí:
-
 1. **Ostatní organizátoři by to nepoužívali.** IP adresy, terminál a „musíš být na naší wifi" jsou bariéra, kterou dobrovolníci nepřekousnou. Nástroj, který tým nechce používat, je horší nástroj.
 2. **Provozní křehkost:** firewall blokující port, měnící se IP, usínající notebook. Každá z těch věcí umí shodit práci na hře.
 3. **Offline výhoda je menší, než vypadá** — dokumenty se stejně vkládají a tisknou z Google Docs, což bez signálu taky nejde.
@@ -883,7 +861,6 @@ Kdyby v budoucnu přece jen vznikla lokální instance, platí: **nikdy neprovoz
 Zvažována a **zamítnuta**, i když v1 nemá tajné klíče a technicky by na GitHub Pages běžela.
 
 Důvody:
-
 1. **Server je od začátku, aby bylo kam ve fázi 2 přidat Google** (§10.6). Přidat `googleapis` do existující serverové aplikace je práce na odpoledne; předělat statickou aplikaci na serverovou je přepis.
 2. **Dva souběžné běhy a víc orgů** potřebují jedno sdílené místo pro data. Stav v souboru, který si někdo stáhne a příště nahraje, by se při dvou bězích a více lidech nevyhnutelně rozešel.
 3. **Data v prohlížeči jednoho člověka nejsou archiv** (§2, bod 2).
@@ -891,7 +868,6 @@ Důvody:
 ### 18.5 Zálohování [ROZHODNUTO]
 
 **Tlačítko „Zazálohovat":**
-
 1. Vytvoří konzistentní snapshot databáze (`pg_dump`, případně vlastní export všech tabulek běhu do JSON).
 2. Nabídne ho ke stažení. Org ho odloží na Sdílený disk nebo flashku.
 
