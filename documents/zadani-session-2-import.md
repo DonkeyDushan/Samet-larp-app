@@ -1,6 +1,6 @@
 # Session 2: Import konfigurace a validace
 
-*Kompletní specifikace je v `zadani-larp-engine.md`. Ten je zdrojem pravdy.*
+_Kompletní specifikace je v `zadani-larp-engine.md`. Ten je zdrojem pravdy._
 
 ## Kde jsme
 
@@ -14,19 +14,17 @@ Bez tohohle nemá engine na čem běžet a autor hry nemá jak zjistit, že se v
 
 ## Vstup
 
-Autor hry stáhne Google Sheet přes *Soubor → Stáhnout → Microsoft Excel*. Vznikne **jeden `.xlsx` se všemi listy**. Ten se nahraje do aplikace přetažením.
-
-Záložní cesta: nahrání jednotlivých `.csv`, jeden na list. Uděláme ji, ale v UI ji nenabízej jako první volbu.
+Autor hry stáhne Google Sheet přes _Soubor → Stáhnout → Microsoft Excel_. Vznikne **jeden `.xlsx` se všemi listy**. Ten se nahraje do aplikace přetažením.
 
 ### Listy v souboru
 
-| List | Obsah |
-|---|---|
-| `Characters` | Registr postav: ID, jméno, příjmení, skupina, ID šablony, počáteční hodnoty škál pro kapitolu 1 |
-| `1_Questions`, `2_Questions`, `3_Questions` | Otázky, odpovědi, dopady na škály, zapínané bloky a příznaky, zdroj (`hráč` / `org`), příznak `párová` |
-| `1_Scales`, `2_Scales`, `3_Scales` | Definice škál: rozsah platnosti (`postava` / `domácnost`), prahy a názvy pásem, strategie sloučení a rozdělení |
-| `1_Content`, `2_Content`, `3_Content` | Bloky a jejich varianty: text, priorita, podmínka (§8.2). **Ukázka je v `Konfigurace_Struktura_-_2_Content.csv`.** |
-| `Validations` | Konfigurace kontrol |
+| List                                        | Obsah                                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Characters`                                | Registr postav: ID, jméno, příjmení, skupina, ID šablony, počáteční hodnoty škál pro kapitolu 1                    |
+| `1_Questions`, `2_Questions`, `3_Questions` | Otázky, odpovědi, dopady na škály, zapínané bloky a příznaky, zdroj (`hráč` / `org`), příznak `párová`             |
+| `1_Scales`, `2_Scales`, `3_Scales`          | Definice škál: rozsah platnosti (`postava` / `domácnost`), prahy a názvy pásem, strategie sloučení a rozdělení     |
+| `1_Content`, `2_Content`, `3_Content`       | Bloky a jejich varianty: text, priorita, podmínka (§8.2). **Ukázka je v `Konfigurace_Struktura_-_2_Content.csv`.** |
+| `Validations`                               | Konfigurace kontrol                                                                                                |
 
 Konvence ID a formát sloupců jsou v §4.2 a §4.5. **Formát dopadu na škály:** čárkou oddělený seznam `S_<Postava>_<Skala><znaménko><číslo>`, například `S_Marie_Wealth_osobni+3, S_Marie_Regime-2`.
 
@@ -44,6 +42,7 @@ Konvence ID a formát sloupců jsou v §4.2 a §4.5. **Formát dopadu na škály
 Rozděl na **chyby** (blokují použití konfigurace) a **varování** (pustí dál, ale upozorní).
 
 **Chyby:**
+
 - Chybějící povinný list nebo sloupec
 - Odkaz na neexistující postavu, škálu, skupinu nebo blok
 - Odpověď bez otázky, otázka bez odpovědí
@@ -54,6 +53,7 @@ Rozděl na **chyby** (blokují použití konfigurace) a **varování** (pustí d
 - Postava bez přiřazené šablony
 
 **Varování:**
+
 - Pravidlo, jehož podmínka nemůže nikdy nastat
 - Dvě pravidla se stejnou prioritou a protichůdným efektem
 - Textový blok, na který nevede žádná cesta

@@ -199,6 +199,19 @@ export const effects = pgTable(
     answerOptionId: uuid('answer_option_id'),
     ordinal: integer('ordinal').notNull().default(0),
 
+    /**
+     * Deterministic ID derived from the owner and the ordinal
+     * (`A_Marie_1_1_Karel#0`). Effects have no ID in the source sheet, but a
+     * re-import has to update them rather than add a second copy.
+     */
+    externalId: text('external_id').notNull(),
+    /**
+     * Which config version last wrote this effect. An effect the sheet no
+     * longer produces keeps its old stamp and drops out of the active version
+     * without being deleted (rule 3).
+     */
+    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
+
     kind: effectKind('kind').notNull(),
     /** Effect weight (§7.2); the result is a sum of weighted contributions. */
     weight: numeric('weight', { precision: 8, scale: 3 }).notNull().default('1'),
@@ -246,6 +259,8 @@ export const effects = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
+    unique('effects_run_id_key').on(t.runId, t.id),
+    unique('effects_run_external_key').on(t.runId, t.externalId),
     check(
       'effects_exactly_one_owner',
       sql`(${t.ruleId} is not null) <> (${t.answerOptionId} is not null)`,
@@ -264,6 +279,11 @@ export const effects = pgTable(
       'effects_merge_needs_related',
       sql`${t.kind} <> 'domacnost_slouceni' or ${t.relatedCharacterId} is not null or ${t.relatedFromAnswer}`,
     ),
+    foreignKey({
+      name: 'effects_config_version_fk',
+      columns: [t.runId, t.sourceConfigVersionId],
+      foreignColumns: [configVersions.runId, configVersions.id],
+    }).onDelete('restrict'),
     foreignKey({
       name: 'effects_rule_fk',
       columns: [t.runId, t.ruleId],

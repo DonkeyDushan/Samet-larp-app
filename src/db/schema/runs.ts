@@ -62,6 +62,11 @@ export const configVersions = pgTable(
     sourceHash: text('source_hash').notNull(),
     /** Diff against the previous version, for the admin screen. */
     diffFromPrevious: jsonb('diff_from_previous'),
+    /**
+     * Flat snapshot of what this version contains, so the next import can diff
+     * against it without re-parsing the old upload.
+     */
+    contentSnapshot: jsonb('content_snapshot'),
     /** Import errors and warnings, pointing at sheet and row (§10.2). */
     importReport: jsonb('import_report'),
     note: text('note'),
