@@ -55,6 +55,14 @@ export const rules = pgTable(
     isExclusion: boolean('is_exclusion').notNull().default(false),
     isEnabled: boolean('is_enabled').notNull().default(true),
     /**
+     * „Aplikovat jednou za domácnost" (§4.4). U sdílených škál se efekty
+     * jednotlivých členů normálně **sčítají** — oba do společného účtu
+     * vydělávají. Události, které postihnou domácnost jako celek (vykradli
+     * vás, dostali jste byt), by se ale započítaly tolikrát, kolik má
+     * domácnost členů. Tenhle příznak to zastaví.
+     */
+    appliesOncePerHousehold: boolean('applies_once_per_household').notNull().default(false),
+    /**
      * Pravidlo si vyžádá hod kostkou o tolika stěnách (§7.4).
      * NULL = pravidlo náhodu nepoužívá.
      */
@@ -231,6 +239,22 @@ export const effects = pgTable(
     tagCode: text('tag_code'),
     tagNote: text('tag_note'),
 
+    /**
+     * **Druhá postava efektu — cíl odvozený z odpovědi (§7.3).**
+     *
+     * Většina efektů se týká postavy, která odpověděla. Některé ne:
+     * - `domacnost_slouceni` potřebuje partnera (sňatek),
+     * - `vedeni` potřebuje vědět, kdo se stal vedoucím,
+     * - `clenstvi` koho přidat nebo odebrat.
+     *
+     * `relatedCharacterId` jmenuje postavu natvrdo, `relatedFromAnswer` vezme
+     * postavu, na kterou odkazuje vybraná volba odpovědi
+     * (`answer_options.referenced_character_id`). Druhá cesta je ta, kvůli
+     * které nemusí autor psát pravidlo pro každou kombinaci 23 postav.
+     */
+    relatedCharacterId: uuid('related_character_id'),
+    relatedFromAnswer: boolean('related_from_answer').notNull().default(false),
+
     note: text('note'),
     createdAt: createdAt(),
   },
@@ -242,6 +266,16 @@ export const effects = pgTable(
     check(
       'effects_scale_value_range',
       sql`${t.scaleSetValue} is null or ${t.scaleSetValue} between 1 and 10`,
+    ),
+    // Druhá postava se zadá buď jmenovitě, nebo z odpovědi — ne obojí.
+    check(
+      'effects_related_single_source',
+      sql`not (${t.relatedCharacterId} is not null and ${t.relatedFromAnswer})`,
+    ),
+    // Sloučení domácnosti se bez druhé postavy neobejde.
+    check(
+      'effects_merge_needs_related',
+      sql`${t.kind} <> 'domacnost_slouceni' or ${t.relatedCharacterId} is not null or ${t.relatedFromAnswer}`,
     ),
     foreignKey({
       name: 'effects_rule_fk',
@@ -256,6 +290,11 @@ export const effects = pgTable(
     foreignKey({
       name: 'effects_character_fk',
       columns: [t.runId, t.characterId],
+      foreignColumns: [characters.runId, characters.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'effects_related_character_fk',
+      columns: [t.runId, t.relatedCharacterId],
       foreignColumns: [characters.runId, characters.id],
     }).onDelete('restrict'),
     foreignKey({

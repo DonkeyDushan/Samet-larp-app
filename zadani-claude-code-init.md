@@ -1,6 +1,6 @@
 # Inicializace projektu — zadání pro Claude Code
 
-*Kompletní specifikace je v souboru `zadani-larp-engine.md`. Ten je zdrojem pravdy; tenhle dokument je jen startovní úkol.*
+_Kompletní specifikace je v souboru `zadani-larp-engine.md`. Ten je zdrojem pravdy; tenhle dokument je jen startovní úkol._
 
 ## Kontext
 
@@ -16,16 +16,16 @@ Rozsah: 23 postav, 7 skupin, 3 kapitoly, 2 souběžné běhy hry. Uživatelé js
 
 ## Technologie [ROZHODNUTO]
 
-| Vrstva | Volba |
-|---|---|
-| Framework | Next.js, App Router, TypeScript |
-| Databáze | Postgres (Neon), lokálně přes Docker nebo Neon dev větev |
-| ORM | Drizzle |
-| UI | Tailwind, vlastní jednoduché komponenty |
-| Testy | Vitest, primárně na engine pravidel |
-| Import tabulek | SheetJS (`xlsx`) |
-| Zip | `jszip` nebo `archiver` |
-| Hosting | Vercel |
+| Vrstva         | Volba                                                    |
+| -------------- | -------------------------------------------------------- |
+| Framework      | Next.js, App Router, TypeScript                          |
+| Databáze       | Postgres (Neon), lokálně přes Docker nebo Neon dev větev |
+| ORM            | Drizzle                                                  |
+| UI             | Tailwind, vlastní jednoduché komponenty                  |
+| Testy          | Vitest, primárně na engine pravidel                      |
+| Import tabulek | SheetJS (`xlsx`)                                         |
+| Zip            | `jszip` nebo `archiver`                                  |
+| Hosting        | Vercel                                                   |
 
 Žádné Google API. Verze 1 komunikuje se světem **výhradně přes nahrané a stažené soubory**.
 

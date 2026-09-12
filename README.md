@@ -12,8 +12,8 @@ pravdy**. Architektonická pravidla, která platí v každé session, jsou v
 
 ## Stav projektu
 
-Hotové je datové schéma (24 tabulek, migrace aplikovaná a odzkoušená) a typy
-enginu. Engine, import `.xlsx` ani rozhraní ještě nestojí — viz harmonogram
+Hotové je datové schéma (27 tabulek, migrace aplikovaná a odzkoušená) a typy
+enginu, včetně domácností a sdílených škál (§4.4). Engine, import `.xlsx` ani rozhraní ještě nestojí — viz harmonogram
 v §15.1 zadání.
 
 ## Co je potřeba mít

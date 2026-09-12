@@ -47,7 +47,7 @@ export const conditionOperator = pgEnum('condition_operator', [
 /** Spojka podmínky se předchozí podmínkou ve stejné skupině. */
 export const conditionConnector = pgEnum('condition_connector', ['AND', 'OR'])
 
-/** Druh efektu (§7.1). */
+/** Druh efektu (§7.1, §4.4). */
 export const effectKind = pgEnum('effect_kind', [
   'zmena_skaly',
   'nastaveni_skaly',
@@ -57,7 +57,44 @@ export const effectKind = pgEnum('effect_kind', [
   'clenstvi',
   'vedeni',
   'tag',
+  'domacnost_slouceni',
+  'domacnost_rozdeleni',
 ])
+
+/**
+ * Rozsah platnosti škály (§4.4). `postava` = hodnota patří jedné postavě
+ * (`Regime`, `Control`). `domacnost` = hodnota patří domácnosti a všichni
+ * členové čtou a mění tutéž (`Wealth`, `Bony`, firemní byt, auto).
+ */
+export const scaleScope = pgEnum('scale_scope', ['postava', 'domacnost'])
+
+/**
+ * Jak se hodnoty slévají při sňatku (§4.4). Výchozí je součet s ořezem na 10.
+ *
+ * `otazka` znamená **nedopočítávat vůbec** — hodnota přijde z odpovědi nebo
+ * rozhodnutí orga. Tak se to dělá u peněz: kolik kdo do společného vložil,
+ * si hráči rozehrávají sami a „součet a ořízni" by jim to vzalo.
+ */
+export const mergeStrategy = pgEnum('merge_strategy', [
+  'soucet',
+  'prumer',
+  'vyssi',
+  'otazka',
+])
+
+/**
+ * Jak se hodnota dělí při rozvodu nebo úmrtí (§4.4).
+ * Výchozí `kopie` = každý si odnáší aktuální hodnotu domácnosti.
+ * `otazka` = nedopočítávat, rozhodne odpověď nebo org. Žádné tiché dopočítání.
+ */
+export const splitStrategy = pgEnum('split_strategy', ['kopie', 'polovina', 'otazka'])
+
+/**
+ * Kdo otázku vyplňuje (§6.7). `org` se **netiskne do dotazníku pro hráče**;
+ * jinak se chová úplně stejně jako hráčská otázka — je to jen jiný zdroj
+ * vstupu, ne jiný mechanismus, a engine mezi nimi nerozlišuje.
+ */
+export const questionSource = pgEnum('question_source', ['hrac', 'org'])
 
 /** Akce nad členstvím ve skupině. */
 export const membershipAction = pgEnum('membership_action', ['pridat', 'odebrat'])

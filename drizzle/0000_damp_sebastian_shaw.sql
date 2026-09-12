@@ -5,11 +5,15 @@ CREATE TYPE "public"."computation_status" AS ENUM('navrh', 'potvrzena');--> stat
 CREATE TYPE "public"."condition_connector" AS ENUM('AND', 'OR');--> statement-breakpoint
 CREATE TYPE "public"."condition_operator" AS ENUM('eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'obsahuje', 'je_pravda', 'je_nepravda');--> statement-breakpoint
 CREATE TYPE "public"."condition_subject" AS ENUM('odpoved', 'skala', 'pasmo', 'priznak', 'clenstvi', 'vedeni', 'hod');--> statement-breakpoint
-CREATE TYPE "public"."effect_kind" AS ENUM('zmena_skaly', 'nastaveni_skaly', 'pasmo', 'priznak', 'blok', 'clenstvi', 'vedeni', 'tag');--> statement-breakpoint
+CREATE TYPE "public"."effect_kind" AS ENUM('zmena_skaly', 'nastaveni_skaly', 'pasmo', 'priznak', 'blok', 'clenstvi', 'vedeni', 'tag', 'domacnost_slouceni', 'domacnost_rozdeleni');--> statement-breakpoint
 CREATE TYPE "public"."group_role" AS ENUM('clen', 'vedouci');--> statement-breakpoint
 CREATE TYPE "public"."membership_action" AS ENUM('pridat', 'odebrat');--> statement-breakpoint
+CREATE TYPE "public"."merge_strategy" AS ENUM('soucet', 'prumer', 'vyssi', 'otazka');--> statement-breakpoint
+CREATE TYPE "public"."question_source" AS ENUM('hrac', 'org');--> statement-breakpoint
 CREATE TYPE "public"."question_type" AS ENUM('bool', 'single', 'multi', 'scale_direct', 'text');--> statement-breakpoint
 CREATE TYPE "public"."run_status" AS ENUM('zalozen', 'aktivni', 'archivovan');--> statement-breakpoint
+CREATE TYPE "public"."scale_scope" AS ENUM('postava', 'domacnost');--> statement-breakpoint
+CREATE TYPE "public"."split_strategy" AS ENUM('kopie', 'polovina', 'otazka');--> statement-breakpoint
 CREATE TYPE "public"."state_source" AS ENUM('pocatecni', 'prepocet', 'rucni');--> statement-breakpoint
 CREATE TYPE "public"."template_kind" AS ENUM('postava', 'skupina', 'highlighty', 'dotaznik');--> statement-breakpoint
 CREATE TABLE "chapters" (
@@ -89,6 +93,17 @@ CREATE TABLE "groups" (
 	CONSTRAINT "groups_run_external_key" UNIQUE("run_id","external_id")
 );
 --> statement-breakpoint
+CREATE TABLE "households" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"run_id" text NOT NULL,
+	"external_id" text NOT NULL,
+	"label" text,
+	"created_in_chapter_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "households_run_id_key" UNIQUE("run_id","id"),
+	CONSTRAINT "households_run_external_key" UNIQUE("run_id","external_id")
+);
+--> statement-breakpoint
 CREATE TABLE "character_scales" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"run_id" text NOT NULL,
@@ -139,12 +154,16 @@ CREATE TABLE "scales" (
 	"description" text,
 	"min_value" integer DEFAULT 1 NOT NULL,
 	"max_value" integer DEFAULT 10 NOT NULL,
+	"scope" "scale_scope" DEFAULT 'postava' NOT NULL,
+	"merge_strategy" "merge_strategy",
+	"split_strategy" "split_strategy",
 	"source_config_version_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "scales_run_id_key" UNIQUE("run_id","id"),
 	CONSTRAINT "scales_run_key_key" UNIQUE("run_id","key"),
 	CONSTRAINT "scales_range_sane" CHECK ("scales"."min_value" < "scales"."max_value"),
-	CONSTRAINT "scales_range_within_1_10" CHECK ("scales"."min_value" >= 1 and "scales"."max_value" <= 10)
+	CONSTRAINT "scales_range_within_1_10" CHECK ("scales"."min_value" >= 1 and "scales"."max_value" <= 10),
+	CONSTRAINT "scales_household_strategies" CHECK (("scales"."scope" = 'domacnost') = ("scales"."merge_strategy" is not null and "scales"."split_strategy" is not null))
 );
 --> statement-breakpoint
 CREATE TABLE "answer_options" (
@@ -197,6 +216,8 @@ CREATE TABLE "questions" (
 	"character_id" uuid NOT NULL,
 	"ordinal" integer NOT NULL,
 	"type" "question_type" NOT NULL,
+	"source" "question_source" DEFAULT 'hrac' NOT NULL,
+	"is_paired" boolean DEFAULT false NOT NULL,
 	"text" text NOT NULL,
 	"help_text" text,
 	"scale_id" uuid,
@@ -206,7 +227,8 @@ CREATE TABLE "questions" (
 	CONSTRAINT "questions_run_id_key" UNIQUE("run_id","id"),
 	CONSTRAINT "questions_run_external_key" UNIQUE("run_id","external_id"),
 	CONSTRAINT "questions_character_ordinal_key" UNIQUE("run_id","chapter_id","character_id","ordinal"),
-	CONSTRAINT "questions_scale_direct_needs_scale" CHECK (("questions"."type" = 'scale_direct') = ("questions"."scale_id" is not null))
+	CONSTRAINT "questions_scale_direct_needs_scale" CHECK (("questions"."type" = 'scale_direct') = ("questions"."scale_id" is not null)),
+	CONSTRAINT "questions_paired_needs_options" CHECK (not "questions"."is_paired" or "questions"."type" in ('single', 'multi'))
 );
 --> statement-breakpoint
 CREATE TABLE "effects" (
@@ -231,10 +253,14 @@ CREATE TABLE "effects" (
 	"group_role" "group_role",
 	"tag_code" text,
 	"tag_note" text,
+	"related_character_id" uuid,
+	"related_from_answer" boolean DEFAULT false NOT NULL,
 	"note" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "effects_exactly_one_owner" CHECK (("effects"."rule_id" is not null) <> ("effects"."answer_option_id" is not null)),
-	CONSTRAINT "effects_scale_value_range" CHECK ("effects"."scale_set_value" is null or "effects"."scale_set_value" between 1 and 10)
+	CONSTRAINT "effects_scale_value_range" CHECK ("effects"."scale_set_value" is null or "effects"."scale_set_value" between 1 and 10),
+	CONSTRAINT "effects_related_single_source" CHECK (not ("effects"."related_character_id" is not null and "effects"."related_from_answer")),
+	CONSTRAINT "effects_merge_needs_related" CHECK ("effects"."kind" <> 'domacnost_slouceni' or "effects"."related_character_id" is not null or "effects"."related_from_answer")
 );
 --> statement-breakpoint
 CREATE TABLE "rule_conditions" (
@@ -273,6 +299,7 @@ CREATE TABLE "rules" (
 	"weight" numeric(8, 3) DEFAULT '1' NOT NULL,
 	"is_exclusion" boolean DEFAULT false NOT NULL,
 	"is_enabled" boolean DEFAULT true NOT NULL,
+	"applies_once_per_household" boolean DEFAULT false NOT NULL,
 	"dice_sides" integer,
 	"source_config_version_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -385,6 +412,36 @@ CREATE TABLE "group_memberships" (
 	CONSTRAINT "group_memberships_unique" UNIQUE NULLS NOT DISTINCT("run_id","chapter_id","character_id","group_id","computation_id")
 );
 --> statement-breakpoint
+CREATE TABLE "household_memberships" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"run_id" text NOT NULL,
+	"chapter_id" uuid NOT NULL,
+	"character_id" uuid NOT NULL,
+	"household_id" uuid NOT NULL,
+	"source" "state_source" NOT NULL,
+	"computation_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "household_memberships_one_per_character" UNIQUE NULLS NOT DISTINCT("run_id","chapter_id","character_id","computation_id")
+);
+--> statement-breakpoint
+CREATE TABLE "household_scale_values" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"run_id" text NOT NULL,
+	"chapter_id" uuid NOT NULL,
+	"household_id" uuid NOT NULL,
+	"scale_id" uuid NOT NULL,
+	"value" integer NOT NULL,
+	"raw_value" integer,
+	"was_clamped" boolean DEFAULT false NOT NULL,
+	"band_id" uuid,
+	"source" "state_source" NOT NULL,
+	"computation_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "household_scale_values_unique" UNIQUE NULLS NOT DISTINCT("run_id","chapter_id","household_id","scale_id","computation_id"),
+	CONSTRAINT "household_scale_values_range" CHECK ("household_scale_values"."value" between 1 and 10),
+	CONSTRAINT "household_scale_values_clamp_consistency" CHECK (("household_scale_values"."was_clamped" = false) or ("household_scale_values"."raw_value" is not null and "household_scale_values"."raw_value" <> "household_scale_values"."value"))
+);
+--> statement-breakpoint
 CREATE TABLE "templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"run_id" text NOT NULL,
@@ -433,6 +490,8 @@ ALTER TABLE "characters" ADD CONSTRAINT "characters_home_group_fk" FOREIGN KEY (
 ALTER TABLE "characters" ADD CONSTRAINT "characters_config_version_fk" FOREIGN KEY ("run_id","source_config_version_id") REFERENCES "public"."config_versions"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "groups" ADD CONSTRAINT "groups_run_id_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."runs"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "groups" ADD CONSTRAINT "groups_config_version_fk" FOREIGN KEY ("run_id","source_config_version_id") REFERENCES "public"."config_versions"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "households" ADD CONSTRAINT "households_run_id_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."runs"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "households" ADD CONSTRAINT "households_chapter_fk" FOREIGN KEY ("run_id","created_in_chapter_id") REFERENCES "public"."chapters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_scales" ADD CONSTRAINT "character_scales_run_id_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."runs"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_scales" ADD CONSTRAINT "character_scales_character_fk" FOREIGN KEY ("run_id","character_id") REFERENCES "public"."characters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_scales" ADD CONSTRAINT "character_scales_scale_fk" FOREIGN KEY ("run_id","scale_id") REFERENCES "public"."scales"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -462,6 +521,7 @@ ALTER TABLE "effects" ADD CONSTRAINT "effects_run_id_runs_id_fk" FOREIGN KEY ("r
 ALTER TABLE "effects" ADD CONSTRAINT "effects_rule_fk" FOREIGN KEY ("run_id","rule_id") REFERENCES "public"."rules"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "effects" ADD CONSTRAINT "effects_option_fk" FOREIGN KEY ("run_id","answer_option_id") REFERENCES "public"."answer_options"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "effects" ADD CONSTRAINT "effects_character_fk" FOREIGN KEY ("run_id","character_id") REFERENCES "public"."characters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "effects" ADD CONSTRAINT "effects_related_character_fk" FOREIGN KEY ("run_id","related_character_id") REFERENCES "public"."characters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "effects" ADD CONSTRAINT "effects_scale_fk" FOREIGN KEY ("run_id","scale_id") REFERENCES "public"."scales"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "effects" ADD CONSTRAINT "effects_band_fk" FOREIGN KEY ("run_id","band_id") REFERENCES "public"."scale_bands"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "effects" ADD CONSTRAINT "effects_flag_fk" FOREIGN KEY ("run_id","flag_id") REFERENCES "public"."flags"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -506,6 +566,17 @@ ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_chapter_fk" FO
 ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_character_fk" FOREIGN KEY ("run_id","character_id") REFERENCES "public"."characters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_group_fk" FOREIGN KEY ("run_id","group_id") REFERENCES "public"."groups"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_computation_fk" FOREIGN KEY ("run_id","computation_id") REFERENCES "public"."computations"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_memberships" ADD CONSTRAINT "household_memberships_run_id_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."runs"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_memberships" ADD CONSTRAINT "household_memberships_chapter_fk" FOREIGN KEY ("run_id","chapter_id") REFERENCES "public"."chapters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_memberships" ADD CONSTRAINT "household_memberships_character_fk" FOREIGN KEY ("run_id","character_id") REFERENCES "public"."characters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_memberships" ADD CONSTRAINT "household_memberships_household_fk" FOREIGN KEY ("run_id","household_id") REFERENCES "public"."households"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_memberships" ADD CONSTRAINT "household_memberships_computation_fk" FOREIGN KEY ("run_id","computation_id") REFERENCES "public"."computations"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_scale_values" ADD CONSTRAINT "household_scale_values_run_id_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."runs"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_scale_values" ADD CONSTRAINT "household_scale_values_chapter_fk" FOREIGN KEY ("run_id","chapter_id") REFERENCES "public"."chapters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_scale_values" ADD CONSTRAINT "household_scale_values_household_fk" FOREIGN KEY ("run_id","household_id") REFERENCES "public"."households"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_scale_values" ADD CONSTRAINT "household_scale_values_scale_fk" FOREIGN KEY ("run_id","scale_id") REFERENCES "public"."scales"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_scale_values" ADD CONSTRAINT "household_scale_values_band_fk" FOREIGN KEY ("run_id","band_id") REFERENCES "public"."scale_bands"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "household_scale_values" ADD CONSTRAINT "household_scale_values_computation_fk" FOREIGN KEY ("run_id","computation_id") REFERENCES "public"."computations"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_run_id_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."runs"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_chapter_fk" FOREIGN KEY ("run_id","chapter_id") REFERENCES "public"."chapters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_character_fk" FOREIGN KEY ("run_id","character_id") REFERENCES "public"."characters"("run_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint

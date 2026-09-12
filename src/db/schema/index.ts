@@ -12,6 +12,7 @@
 export * from './enums'
 export * from './runs'
 export * from './characters'
+export * from './households'
 export * from './scales'
 export * from './questions'
 export * from './rules'

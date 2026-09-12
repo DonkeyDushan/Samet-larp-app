@@ -13,6 +13,7 @@ import {
 import { authorName, createdAt } from './_shared'
 import { groupRole, stateSource } from './enums'
 import { characters, groups } from './characters'
+import { households } from './households'
 import { flags, scaleBands, scales } from './scales'
 import { rules } from './rules'
 import { computations } from './computations'
@@ -182,6 +183,123 @@ export const groupMemberships = pgTable(
     }).onDelete('restrict'),
     foreignKey({
       name: 'group_memberships_computation_fk',
+      columns: [t.runId, t.computationId],
+      foreignColumns: [computations.runId, computations.id],
+    }).onDelete('restrict'),
+  ],
+)
+
+/**
+ * Kdo je v které domácnosti — snapshot na kapitolu (§4.4).
+ *
+ * **Postava smí být v jednu chvíli nejvýše v jedné domácnosti.** Vynucuje to
+ * unikát na (běh, kapitola, postava, verze přepočtu), ne jen kontrola
+ * konzistence — je to invariant, na kterém stojí čtení sdílených hodnot.
+ *
+ * Při založení běhu dostane každá postava vlastní domácnost o jednom členovi,
+ * takže tahle tabulka je vždy plná a engine nepotřebuje větev pro „bez domácnosti".
+ */
+export const householdMemberships = pgTable(
+  'household_memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    runId: text('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'restrict' }),
+    chapterId: uuid('chapter_id').notNull(),
+    characterId: uuid('character_id').notNull(),
+    householdId: uuid('household_id').notNull(),
+    source: stateSource('source').notNull(),
+    computationId: uuid('computation_id'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('household_memberships_one_per_character')
+      .on(t.runId, t.chapterId, t.characterId, t.computationId)
+      .nullsNotDistinct(),
+    foreignKey({
+      name: 'household_memberships_chapter_fk',
+      columns: [t.runId, t.chapterId],
+      foreignColumns: [chapters.runId, chapters.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_memberships_character_fk',
+      columns: [t.runId, t.characterId],
+      foreignColumns: [characters.runId, characters.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_memberships_household_fk',
+      columns: [t.runId, t.householdId],
+      foreignColumns: [households.runId, households.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_memberships_computation_fk',
+      columns: [t.runId, t.computationId],
+      foreignColumns: [computations.runId, computations.id],
+    }).onDelete('restrict'),
+  ],
+)
+
+/**
+ * Hodnota **sdílené** škály (§4.4) — vlastníkem je domácnost, ne postava.
+ *
+ * Škály s rozsahem `postava` patří do `character_scale_values`, škály
+ * s rozsahem `domacnost` sem. Že řádek odpovídá rozsahu své škály, databáze
+ * neuhlídá (je to křížem přes tabulky) — hlídá to kontrola konzistence §11.
+ *
+ * Ořez se drží stejně jako u škál postavy: `raw_value` je hodnota před ořezem.
+ * U sdílené škály je to o to důležitější, že do ní přispívá víc lidí, takže
+ * se hranice dosáhne snáz.
+ */
+export const householdScaleValues = pgTable(
+  'household_scale_values',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    runId: text('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'restrict' }),
+    chapterId: uuid('chapter_id').notNull(),
+    householdId: uuid('household_id').notNull(),
+    scaleId: uuid('scale_id').notNull(),
+    value: integer('value').notNull(),
+    rawValue: integer('raw_value'),
+    wasClamped: boolean('was_clamped').notNull().default(false),
+    bandId: uuid('band_id'),
+    source: stateSource('source').notNull(),
+    computationId: uuid('computation_id'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('household_scale_values_unique')
+      .on(t.runId, t.chapterId, t.householdId, t.scaleId, t.computationId)
+      .nullsNotDistinct(),
+    check('household_scale_values_range', sql`${t.value} between 1 and 10`),
+    check(
+      'household_scale_values_clamp_consistency',
+      sql`(${t.wasClamped} = false) or (${t.rawValue} is not null and ${t.rawValue} <> ${t.value})`,
+    ),
+    foreignKey({
+      name: 'household_scale_values_chapter_fk',
+      columns: [t.runId, t.chapterId],
+      foreignColumns: [chapters.runId, chapters.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_scale_values_household_fk',
+      columns: [t.runId, t.householdId],
+      foreignColumns: [households.runId, households.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_scale_values_scale_fk',
+      columns: [t.runId, t.scaleId],
+      foreignColumns: [scales.runId, scales.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_scale_values_band_fk',
+      columns: [t.runId, t.bandId],
+      foreignColumns: [scaleBands.runId, scaleBands.id],
+    }).onDelete('restrict'),
+    foreignKey({
+      name: 'household_scale_values_computation_fk',
       columns: [t.runId, t.computationId],
       foreignColumns: [computations.runId, computations.id],
     }).onDelete('restrict'),

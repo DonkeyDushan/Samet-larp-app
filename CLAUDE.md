@@ -83,10 +83,145 @@ fáze 2 a **nikdy nenahradí** souborovou cestu.
 
 PDF se negeneruje — tiskne se z Google Docs.
 
+## Tři vrstvy logiky — pravidlo píš až jako poslední
+
+Většina hry se bez pravidel obejde. Než se sáhne po pravidle, patří zkusit
+levnější vrstvu:
+
+| Vrstva | Kde je | Co umí |
+|---|---|---|
+| 1. Dopad na škály | sloupec `Scale Impact` v `N_Questions` | odpověď posune čísla |
+| 2. Bloky a příznaky | sloupce `Blocks` a `Flags` u odpovědi | odpověď rovnou zapne blok v šabloně a nastaví příznak |
+| 3. Pravidla | listy `N_Rules` a `N_Conditions` | složené podmínky, priority, negace, vznik domácnosti |
+
+Vrstva 2 pokrývá „odpověď → text + příznak" **bez jediného pravidla** a je
+nejlevnější na autorskou práci i na ladění. Vrstva 3 je pro to, co jinak nejde.
+
+V databázi všechny tři vrstvy ústí do jedné tabulky `effects`: u vrstev 1 a 2 je
+vlastníkem efektu `answer_option_id`, u vrstvy 3 `rule_id`. Engine je zpracovává
+stejným kódem, takže přidání vrstvy 2 do importu není nová větev v enginu.
+
+Dva listy na pravidla (`N_Rules` + `N_Conditions`) proto, že pravidlo má
+**proměnný počet podmínek**. Podmínky se ukládají strukturovaně
+(subjekt, operátor, hodnota, spojka, skupina) a **nikdy se neparsují z textu.**
+
+## Domácnosti a sdílené škály (§4.4)
+
+- **Škála má v definici rozsah platnosti:** `postava` (`Regime`, `Control`) nebo
+  `domacnost` (`Wealth`, `Bony`, firemní byt, auto).
+- **Sdílená hodnota se nikdy nekopíruje mezi postavami.** Má vlastního
+  vlastníka: hodnoty škál `postava` leží v `character_scale_values`, hodnoty
+  škál `domacnost` v `household_scale_values`.
+- **Každá postava je vždy v nějaké domácnosti.** Svobodná postava je domácnost
+  o jednom členovi — při založení běhu vznikne jedna na každou postavu. Tím
+  v enginu **odpadá větev pro „postavu bez domácnosti"**; nezaváděj ji.
+- **Postava smí být nejvýše v jedné domácnosti**; vynucuje to unikát na
+  `household_memberships`, ne jen validace.
+- **Efekty členů na sdílenou škálu se sčítají** — oba do společného účtu
+  vydělávají. Události, které postihnou domácnost jako celek (vykradli vás,
+  dostali jste byt), musí mít na pravidle `applies_once_per_household`.
+- **Vznik i zánik domácnosti je efekt pravidla**, ne ruční operace:
+  `domacnost_slouceni` / `domacnost_rozdeleni`.
+- **Cíl efektu umí být odvozený z odpovědi** (§7.3). Efekt nese
+  `related_character_id` (jmenovitě) nebo `related_from_answer` (postava, na
+  kterou odkazuje vybraná volba odpovědi). Používá se pro partnera při sňatku,
+  pro to, kdo se stal vedoucím skupiny, i pro členství. Druhá cesta je ta, kvůli
+  které nemusí autor psát pravidlo pro každou kombinaci 23 postav.
+- Strategie slévání při sňatku (`soucet` / `prumer` / `vyssi`) a dělení při
+  rozvodu (`kopie` / `polovina`) jsou **v definici škály**, ne v kódu.
+  Výchozí je součet s ořezem na 10, resp. každý si odnáší aktuální hodnotu.
+- **Sdílené škály jsou největší riziko pro princip „žádný black box".**
+  Mariiny peníze se změní kvůli Mirkově odpovědi. Proto `TraceContribution`
+  u sdílené škály **vždy nese `characterId` zdroje** a UI musí říct
+  „−3 Wealth, zdroj: odpověď Mirka Pokorného na Q_Mirek2_1". Bez toho je to
+  přesně ten black box, který §2 zakazuje.
+
+## Organizátorské a párové otázky (§6.7)
+
+- Otázka má **zdroj**: `hrac` (výchozí) nebo `org`. Organizátorská se
+  **netiskne do dotazníku pro hráče**, jinak se chová úplně stejně —
+  stejné typy, stejné dopady, stejná pravidla. **Je to jen jiný zdroj vstupu,
+  ne jiný mechanismus; engine mezi nimi nerozlišuje.**
+- V UI jsou v **jednom proudu** s ostatními otázkami postavy, na svém místě
+  podle pořadí, jen s decentní značkou „zadává org". **Ne oddělená sekce a ne
+  druhý ukazatel postupu** — je jich málo, zvláštní sekce by rozbila plynulý
+  průchod dotazníkem.
+- **Párová otázka** (sňatek) se zadává **jen jednou**. V datech existuje
+  **jedna odpověď**, ne dvě zrcadlené: řádek v `answers` patří té postavě,
+  u které byla zadaná, a druhá ji vidí provázanou přes
+  `answer_options.referenced_character_id`. **Nezavádět oboustranné potvrzení
+  ani hlášení nesouladu** — nesoulad nemůže vzniknout, když je odpověď jedna.
+- Zůstává validace: postava smí být cílem nejvýše jednoho sňatku v kapitole
+  a nejvýše v jedné domácnosti.
+- `scale_direct` nastavuje hodnotu **absolutně** a aplikuje se **na začátku
+  hodnotové fáze, před všemi posuny**. Každé absolutní nastavení je v trace
+  zvlášť viditelné.
+
+## Pořadí vyhodnocení je dvoufázové (§7.3)
+
+```
+1. sběr odpovědí
+2. vyloučení (negace) — má přednost před přiřazením
+3. STRUKTURÁLNÍ fáze — domácnosti, sňatky, členství a vedení skupin
+4. HODNOTOVÁ fáze — nejprve absolutní nastavení z org otázek, pak škály a příznaky
+5. pásma
+6. detekce zbylých konfliktů
+```
+
+**Fáze 3 musí proběhnout celá před fází 4.** Sdílená škála potřebuje vědět, kdo
+do domácnosti patří, dřív než se do ní začnou sčítat příspěvky. Kdyby se sňatek
+vyhodnotil až mezi změnami škál, výsledek by závisel na pořadí pravidel — a to je
+přesně ten nedeterminismus, kterému se vyhýbáme.
+
+Rozdělení efektů do fází je v datech (`STRUCTURAL_EFFECT_KINDS`,
+`VALUE_EFFECT_KINDS` v `src/engine/types.ts`), aby ho implementace `evaluate`
+nešla omylem obejít.
+
+## Soukromý i společný účet (§4.4)
+
+Manželé mohou mít obojí. Model to zvládá **bez rozšíření**: jsou to **dvě
+samostatné škály s různým rozsahem platnosti**, ne jedna přepínaná do sdíleného
+režimu.
+
+| Škála | Rozsah |
+|---|---|
+| `Wealth_osobni` | `postava` |
+| `Wealth_spolecny` | `domacnost` |
+
+- Konvence pojmenování `_osobni` / `_spolecny`, aby se v tabulce nedaly splést.
+- **Který účet efekt zasáhne, určuje ID škály v dopadu odpovědi.** Engine nic
+  nedomýšlí. Převod mezi účty je jeden efekt nad dvěma škálami
+  (`Wealth_osobni−2, Wealth_spolecny+2`) — žádná zvláštní mašinérie.
+- **Vznik společného účtu při sňatku se nepočítá automaticky.** Kolik kdo do
+  společného vložil, je **otázka v dotazníku**, ne dopočítaná hodnota — hráči si
+  to rozehrávají sami. Proto má škála strategii `otazka` = nedopočítávat.
+  Totéž u rozdělení při rozvodu: buď otázka, nebo rozhodnutí orga,
+  **nikdy tiché dopočítání**.
+- Svobodná postava společný účet technicky má (domácnost o jednom členovi), ale
+  v dokumentu se neobjeví — zobrazení řídí příznak `Spolecny_ucet` a blok
+  v šabloně, ne existence hodnoty.
+
+## Co se vědomě nemodeluje
+
+- **Obecná tabulka vztahů.** Strukturně existují jen tři vazby: členství ve
+  skupině, vedení skupiny a domácnost. Kde vztah mechanicky rozhoduje, je
+  zachycený jako odpověď odkazující na ID jiné postavy — to jsou ta data.
+  Všechno ostatní je text v šabloně.
+- **Vášně, obavy, ambice.** Jsou to bloky šablony, ne tabulka. Mění se každou
+  kapitolu tím, že se vybere jiný blok. Když má některá ovlivnit pozdější
+  kapitolu, přidá se k ní příznak nebo škála — **text sám se do enginu nikdy
+  nevrací.**
+- Obecné pravidlo: **text, který se jen tiskne, není datový model; co má
+  ovlivnit budoucnost, je škála nebo příznak.**
+- **Pásma nejsou per postava.** Definice škály včetně pásem je per běh a škálu;
+  dvě postavy nemohou mít u téže škály jiná pásma.
+
 ## Doménová pravidla, na která se snadno zapomene
 
 - **Škály jsou celá čísla 1–10 s ořezáním na hranicích.** Ořez se loguje do
   auditu a hlásí v trace — je to signál špatně nastavených vah, ne detail.
+  U sdílené škály to platí dvojnásob: přispívá do ní víc lidí, takže se hranice
+  dosáhne snáz.
 - **Pásma škál mají prahy i názvy v datech, nikdy v kódu.** Výchozí rozdělení
   1–3 / 4–5 / 6–8 / 9–10, ale počet i hranice jsou per škála a názvy jsou
   vlastní pro každou škálu.
@@ -103,8 +238,7 @@ PDF se negeneruje — tiskne se z Google Docs.
   (subjekt, operátor, hodnota, spojka, skupina). **Vlastní jazyk na výrazy nepiš
   nikdy.** Kdyby to bylo neúnosně kostrbaté, teprve pak malá knihovna (`expr-eval`).
 - **Vyloučení (negace) má vždy přednost před přiřazením.** Pořadí vyhodnocení je
-  fixní: sběr odpovědí → vyloučení → efekty podle priority sestupně → pásma →
-  detekce zbylých konfliktů.
+  fixní a **dvoufázové** — viz „Pořadí vyhodnocení je dvoufázové (§7.3)" výše.
 - **Dvě pravidla se stejnou prioritou a protichůdným výsledkem engine neřeší** —
   vyhodí konflikt do UI a nechá rozhodnout orga.
 - **Postavy se nemodelují nad rámec škál, příznaků a členství.** Charakterizace
@@ -144,6 +278,14 @@ PDF se negeneruje — tiskne se z Google Docs.
 
 Dopad na škály ve zdrojové tabulce: `S_Marie_Wealth+3, S_Marie_Regime-2`.
 Speciální hodnota odpovědi `_OTHER_` = volný text doplněný orgem.
+
+Listy konfigurace: `N_Questions` (otázky, odpovědi, `Zdroj`, `Scale Impact`,
+`Blocks`, `Flags`), `N_Scales` (škály, pásma, rozsah platnosti, strategie
+slévání), `N_Content`, `N_Rules`, `N_Conditions`, `Validations`, `Characters`.
+
+`N_Rules`: `RuleID`, `Popis`, `Efekt`, `Priorita`, `Váha`, `Vyloučení`,
+`JednouZaDomácnost`. `N_Conditions`: `RuleID`, `Subjekt`, `Operátor`, `Hodnota`,
+`Spojka`, `Skupina` — **jedna podmínka na řádek.**
 
 Škála se v databázi ukládá **rozložená**: `S_Marie_Wealth` = postava `Marie`
 + škála `Wealth`. Definice škály včetně pásem je per běh a škálu, ne per postavu.

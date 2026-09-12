@@ -9,6 +9,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { createdAt } from './_shared'
+import { mergeStrategy, scaleScope, splitStrategy } from './enums'
 import { characters } from './characters'
 import { configVersions, runs } from './runs'
 
@@ -19,6 +20,11 @@ import { configVersions, runs } from './runs'
  * hranice nemusela hledat v kódu. Hodnoty mimo rozsah se **ořezávají**
  * (clamp), ne obtáčejí, a každý ořez se zapíše do auditu — je to signál
  * špatně nakalibrovaných vah.
+ *
+ * `scope` rozhoduje, **komu hodnota patří** (§4.4): škála s rozsahem `postava`
+ * má hodnoty v `character_scale_values`, škála s rozsahem `domacnost`
+ * v `household_scale_values`. Sdílená hodnota se nikdy nekopíruje mezi
+ * postavami — má vlastního vlastníka.
  */
 export const scales = pgTable(
   'scales',
@@ -34,6 +40,12 @@ export const scales = pgTable(
     description: text('description'),
     minValue: integer('min_value').notNull().default(1),
     maxValue: integer('max_value').notNull().default(10),
+    /** Komu hodnota patří — postavě, nebo domácnosti (§4.4). */
+    scope: scaleScope('scope').notNull().default('postava'),
+    /** Jak se hodnoty slévají při sňatku. Jen u škál s rozsahem `domacnost`. */
+    mergeStrategy: mergeStrategy('merge_strategy'),
+    /** Jak se hodnota dělí při rozvodu nebo úmrtí. Jen u `domacnost`. */
+    splitStrategy: splitStrategy('split_strategy'),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
@@ -44,6 +56,13 @@ export const scales = pgTable(
     // Rozsah 1–10 je rozhodnutí zadání (§4.1), ne konfigurace. Sloupce existují,
     // aby engine hranice nečetl z kódu, ale ven z 1–10 se dostat nesmí.
     check('scales_range_within_1_10', sql`${t.minValue} >= 1 and ${t.maxValue} <= 10`),
+    // Strategie slévání a dělení mají smysl jen u sdílených škál. Vyžadovat je
+    // právě tam drží data poctivá — jinak by u škály postavy ležela nastavení,
+    // která nikdo nikdy nepoužije, a nebylo by poznat, co je záměr.
+    check(
+      'scales_household_strategies',
+      sql`(${t.scope} = 'domacnost') = (${t.mergeStrategy} is not null and ${t.splitStrategy} is not null)`,
+    ),
     foreignKey({
       name: 'scales_config_version_fk',
       columns: [t.runId, t.sourceConfigVersionId],

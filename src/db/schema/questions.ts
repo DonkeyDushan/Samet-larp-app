@@ -11,7 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { authorName, createdAt } from './_shared'
-import { questionType } from './enums'
+import { questionSource, questionType } from './enums'
 import { characters } from './characters'
 import { scales } from './scales'
 import { chapters, configVersions, runs } from './runs'
@@ -22,6 +22,11 @@ import { chapters, configVersions, runs } from './runs'
  * proto je `character_id` povinné.
  *
  * Dotazník je plochý: podmíněné podotázky se vědomě neimplementují.
+ *
+ * `source` odděluje otázky pro hráče od organizátorských (§6.7). Je to jen
+ * jiný zdroj vstupu, ne jiný mechanismus — stejné typy, stejné dopady na
+ * škály, stejná pravidla. V UI jsou v jednom proudu s ostatními otázkami
+ * postavy, jen se značkou „zadává org", a počítají se do téhož ukazatele postupu.
  */
 export const questions = pgTable(
   'questions',
@@ -36,6 +41,18 @@ export const questions = pgTable(
     characterId: uuid('character_id').notNull(),
     ordinal: integer('ordinal').notNull(),
     type: questionType('type').notNull(),
+    /** Kdo otázku vyplňuje (§6.7). `org` se netiskne do dotazníku pro hráče. */
+    source: questionSource('source').notNull().default('hrac'),
+    /**
+     * Párová otázka (§6.7) — typicky sňatek. Týká se dvou postav, ale
+     * **zadává se jen jednou.** Odpověď odkazuje na ID jiné postavy a aplikace
+     * ji zobrazí provázaně i u té druhé postavy.
+     *
+     * V datech je proto **jedna odpověď**, ne dvě zrcadlené — `answers`
+     * drží řádek u té postavy, u které byla zadaná. Tím odpadá celá třída
+     * konfliktů: nesoulad nemůže vzniknout, když je odpověď jen jedna.
+     */
+    isPaired: boolean('is_paired').notNull().default(false),
     text: text('text').notNull(),
     helpText: text('help_text'),
     /** Cílová škála u typu `scale_direct`. */
@@ -58,6 +75,12 @@ export const questions = pgTable(
     check(
       'questions_scale_direct_needs_scale',
       sql`(${t.type} = 'scale_direct') = (${t.scaleId} is not null)`,
+    ),
+    // Párová otázka musí umět odkázat na druhou postavu, což jde jen přes
+    // volby odpovědí s `referenced_character_id`.
+    check(
+      'questions_paired_needs_options',
+      sql`not ${t.isPaired} or ${t.type} in ('single', 'multi')`,
     ),
     foreignKey({
       name: 'questions_chapter_fk',
