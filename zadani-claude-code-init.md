@@ -57,12 +57,13 @@ Založ projekt a navrhni datové schéma. **Zatím žádné UI a žádný engine
    - `chapters` — kapitola v rámci běhu, stav `rozpracovaná` / `spočítaná` / `vydaná`, příznak `dotčená`
    - `characters` — postava v běhu: jméno, příjmení, skupina, ID šablony
    - `groups` — skupina, členové, vedoucí
-   - `scales` — definice škál včetně prahů a názvů pásem (název pásma je vlastní pro každou škálu)
-   - `character_scale_values` — hodnota škály postavy v kapitole, celé číslo 1–10
+   - `households` a `household_members` — postavy sdílející majetek (manželé). Vzniká sňatkem, zaniká rozvodem či úmrtím. Postava smí být nejvýše v jedné (§4.4)
+   - `scales` — definice škál včetně prahů a názvů pásem (název pásma je vlastní pro každou škálu), **rozsahu platnosti (`postava` / `domácnost`)** a strategie sloučení a rozdělení
+   - `scale_values` — hodnota škály v kapitole, celé číslo 1–10. Vlastníkem je **postava, nebo domácnost** podle rozsahu škály — ne dvě různé tabulky
    - `flags` — příznaky událostí u postavy
    - `questions`, `answer_options` — otázky jsou **vlastní pro každou postavu**, žádná sdílená sada
    - `answers` — odpověď postavy v kapitole, příznak „doplněno orgem", uložený hod kostkou
-   - `rules` — podmínka, efekt, priorita, váha, příznak vyloučení (negace)
+   - `rules` — podmínka, efekt, priorita, váha, příznak vyloučení (negace), příznak „aplikovat jednou za domácnost"
    - `templates` — šablona dokumentu jako Markdown se značkami `{BLOK ID}` … `{/BLOK}` a `{PROMENNA}`
    - `computations` — verze přepočtu: běh, kapitola, verze, kdo, důvod, výsledek, trace
    - `audit_log` — append-only
@@ -78,6 +79,7 @@ Založ projekt a navrhni datové schéma. **Zatím žádné UI a žádný engine
 - **Náhoda se hodí jednou a uloží.** Přepočet hod neopakuje, použije uloženou hodnotu. Přehodit lze jen ruční akcí do auditu.
 - **Podmínky pravidel neparsuj z textu.** Ukládej je strukturovaně (subjekt, operátor, hodnota, spojka, skupina). Vlastní jazyk na výrazy nepiš.
 - Postavy se nemodelují nad rámec škál, příznaků a členství. Charakterizace žije v pevném textu šablony.
+- **Sdílené škály (společný účet manželů) řeš vlastnictvím, ne kopírováním hodnot mezi postavami.** Svobodná postava je domácnost o jednom členovi — žádná zvláštní větev v kódu. Trace u sdílené škály musí uvádět, od koho změna přišla.
 
 ## Co udělat na konci
 

@@ -120,6 +120,7 @@ Opatření:
   **Pásma [ROZHODNUTO]:** výchozí rozdělení na 4 pásma — `1–3`, `4–5`, `6–8`, `9–10`. **Každá škála má vlastní názvy pásem** (`Wealth` → „Na dně / Vyžije / Zajištěná / Zazobaná", `Regime` → jiné) i vlastní počet a prahy. Vše definované v listu `N_Scales`, editovatelné. **Nikdy natvrdo v kódu.**
 - **Příznak (Flag)** — booleovská značka události. Např. `Svatba`, `Odchod_do_duchodu`, `Firemni_byt`, `Pristup_do_skladu`. Slouží k větvení textů a jako podmínka pravidel.
 - **Skupina (Group)** — organizace/parta. Má členy, vedoucího, vlastní dokument.
+- **Domácnost (Household)** — postavy sdílející majetek, typicky manželé. Viz §4.4.
 - **Vztah (Relation)** — vazba mezi postavami. *(Detailně modelováno jen v kapitole 1; dál jen pro speciální události.)*
 - **Otázka (Question)** a **Odpověď (Answer)** — viz §6.
 - **Pravidlo (Rule)** — viz §7.
@@ -153,6 +154,49 @@ Zdrojem konfigurace je Google Sheet s tabulkami (per kapitola):
 
 Stav postavy v kapitole N = `{ škály: {…}, příznaky: […], členství: […], vztahy: […] }`.
 Stav se **ukládá jako snapshot po každé kapitole**, nikdy se nepřepisuje. Historie stavů je součástí auditu.
+
+---
+
+
+### 4.4 Domácnosti a sdílené škály [ROZHODNUTO]
+
+Některé postavy sdílejí majetek — manželé mají společný účet. Sdílené hodnoty nesmí být řešené kopírováním mezi postavami; potřebují vlastního vlastníka.
+
+**Zavádí se entita `Domácnost` (Household).** Je to skupina postav, které sdílejí ekonomické hodnoty. Vzniká sňatkem, může zaniknout rozvodem nebo úmrtím.
+
+**Škála má v definici (`N_Scales`) uvedený rozsah platnosti:**
+
+| Rozsah | Význam | Příklad |
+|---|---|---|
+| `postava` | Hodnota patří jedné postavě | `Regime`, `Control` |
+| `domácnost` | Hodnota patří domácnosti, všichni členové čtou a mění tutéž | `Wealth`, `Bony`, firemní byt, auto |
+
+Postava bez domácnosti (svobodná) drží hodnotu domácnostní škály sama — technicky je to domácnost o jednom členovi. Tím odpadá zvláštní větev v kódu.
+
+**Postava smí být v jednu chvíli nejvýše v jedné domácnosti.** Kontrola konzistence (§11).
+
+#### Jak se sdílená hodnota mění
+
+Výchozí chování: **efekty od jednotlivých členů se sčítají.** Když Marie i Mirek odpoví tak, že každý přinese +2 na `Wealth`, společný účet vzroste o 4. Oba do něj vydělávají, takže je to správně.
+
+Pravidlo ale může nést příznak **„aplikovat jednou za domácnost"** pro události, které postihnou domácnost jako celek (vykradli vás, dostali jste byt). Bez toho by se taková událost započítala tolikrát, kolik má domácnost členů.
+
+#### Vznik a zánik domácnosti
+
+Obojí je **efekt pravidla**, ne ruční operace.
+
+- **Sňatek → sloučení.** Výchozí strategie je **součet hodnot s ořezáním na 10**; dvě pětky dají desítku, dvě dvojky čtyřku. Strategie je nastavitelná v definici škály (součet / průměr / vyšší z hodnot), protože pro různé škály dává smysl něco jiného.
+- **Rozvod nebo úmrtí → rozdělení.** Výchozí strategie: **každý si odnáší aktuální hodnotu domácnosti**. Rovněž nastavitelné.
+- Sloučení i rozdělení se zapisuje do trace a auditu s uvedením obou původních hodnot.
+
+#### Dopad na transparentnost
+
+Sdílené škály jsou **největší riziko pro princip „žádný black box"** (§2). Mariiny peníze se změní, aniž by to šlo vysvětlit z jejích odpovědí.
+
+Proto:
+1. Trace u sdílené škály **vždy uvádí, od koho změna přišla**: „−3 Wealth, zdroj: odpověď Mirka Pokorného na Q_Mirek2_1".
+2. V detailu postavy je u sdílené škály **viditelná značka** „společný účet s Mirkem Pokorným" a odkaz na druhou postavu.
+3. Dokument postavy může odkázat na sdílenou hodnotu běžnou proměnnou; z pohledu šablony není rozdíl.
 
 ---
 
@@ -297,7 +341,7 @@ Faktory mají různou váhu. Váha je číslo u pravidla nebo u dopadu odpovědi
 **Pořadí vyhodnocení (fixní):**
 1. Sběr všech odpovědí
 2. Aplikace vyloučení (negací)
-3. Aplikace efektů podle priority sestupně
+3. Aplikace efektů podle priority sestupně — u škál s rozsahem `domácnost` se efekty členů sčítají, pokud pravidlo nenese příznak „aplikovat jednou za domácnost" (§4.4)
 4. Vyhodnocení pásem na škálách
 5. Detekce a nahlášení zbylých konfliktů
 
@@ -512,6 +556,7 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 1. Otázka bez odpovědí / odpověď bez otázky
 2. Odkaz na neexistující škálu, postavu nebo skupinu
 3. Nedosažitelné pravidlo (podmínka nemůže nikdy nastat)
+3b. Postava ve více domácnostech zároveň, nebo domácnostní škála bez definované strategie sloučení (§4.4)
 4. Protichůdná pravidla se stejnou prioritou
 5. Textový blok, na který nevede žádná cesta / postava bez dokumentu
 

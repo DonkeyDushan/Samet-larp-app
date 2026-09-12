@@ -1,0 +1,41 @@
+# závislosti
+node_modules/
+.pnp
+.pnp.js
+
+# build
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# testy
+coverage/
+
+# prostředí
+.env
+.env.local
+.env*.local
+
+# nasazení
+.vercel/
+
+# databáze — snapshoty a zálohy nepatří do gitu (§18.5, §18.6)
+*.dump
+*.sql.gz
+backups/
+
+# výstupy aplikace
+exports/
+tmp/
+
+# lokální nastavení Claude Code
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/settings.json
