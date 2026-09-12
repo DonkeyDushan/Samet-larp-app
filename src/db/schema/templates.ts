@@ -1,9 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
-  boolean,
   check,
   foreignKey,
-  integer,
   jsonb,
   pgTable,
   text,
@@ -19,14 +17,13 @@ import { chapters, runs } from './runs'
 /**
  * A document template: Markdown exported from a Google Doc (§8.3, §10.3).
  *
- * Filling works by deletion, not insertion: the template holds every paragraph
- * variant at once and the app removes the ones the engine did not select.
- * Markers are the paired `{BLOK <ID>}` … `{/BLOK}` plus variables `{JMENO}`,
- * `{PRIJMENI}`, `{VEK}`, `{SKUPINA}`. Nested blocks are unsupported and no
- * marker may survive into the finished document (§8.4).
+ * The template carries only unpaired markers — `{BLOK <ID>}` plus variables
+ * `{JMENO}`, `{PRIJMENI}`, `{VEK}`, `{SKUPINA}`; variant text lives in
+ * `block_variations` (§8.2, §8.4). No marker may survive into the finished
+ * document.
  *
- * Re-uploading the same template makes a new version; the old one stays.
- * Exactly one version is active per (chapter, kind, character/group).
+ * One template per (chapter, kind, character/group): a run has one valid
+ * config (§6.5), and the uploaded file itself is kept in `uploaded_files`.
  *
  * `parsedBlocks` is the parse result from upload, feeding the §11 validations
  * (a block nothing can reach, a block the engine expects but the template lacks).
@@ -48,26 +45,20 @@ export const templates = pgTable(
     externalId: text('external_id'),
     name: text('name').notNull(),
     sourceFilename: text('source_filename').notNull(),
-    /** Raw Markdown with every paragraph variant. */
     markdown: text('markdown').notNull(),
-    /** Found `{BLOK ID}` and `{PROMENNA}` markers plus any pairing errors. */
+    /** Found `{BLOK ID}` and `{PROMENNA}` markers plus any marker problems. */
     parsedBlocks: jsonb('parsed_blocks'),
-    version: integer('version').notNull().default(1),
-    isActive: boolean('is_active').notNull().default(true),
     createdAt: createdAt(),
     createdBy: authorName('created_by'),
   },
   (t) => [
     unique('templates_run_id_key').on(t.runId, t.id),
-    uniqueIndex('templates_active_character')
-      .on(t.runId, t.chapterId, t.characterId)
-      .where(sql`${t.isActive} and ${t.kind} = 'postava'`),
-    uniqueIndex('templates_active_group')
-      .on(t.runId, t.chapterId, t.groupId)
-      .where(sql`${t.isActive} and ${t.kind} = 'skupina'`),
-    uniqueIndex('templates_active_singleton')
+    // NULL targets of the other kinds never collide in a plain unique.
+    unique('templates_character_key').on(t.runId, t.chapterId, t.characterId),
+    unique('templates_group_key').on(t.runId, t.chapterId, t.groupId),
+    uniqueIndex('templates_singleton')
       .on(t.runId, t.chapterId, t.kind)
-      .where(sql`${t.isActive} and ${t.kind} in ('highlighty', 'dotaznik')`),
+      .where(sql`${t.kind} in ('highlighty', 'dotaznik')`),
     check(
       'templates_target_matches_kind',
       sql`case ${t.kind}

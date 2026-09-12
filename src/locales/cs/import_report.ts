@@ -1,11 +1,11 @@
 /** The report shown after checking or importing a config (§10.2). */
-import type { EntityKind } from '@/import'
-
 export const importReport = Object.freeze({
   usable: '— konfigurace je použitelná',
   unusable: '— konfigurace se nedá použít, dokud se chyby neopraví',
-  alreadyImported: (version: number) => `Tenhle soubor už je naimportovaný jako verze ${version}. Nic se nezdvojilo.`,
-  saved: (version: number) => `Uloženo jako verze ${version}. Běh z ní začne počítat, až ji aktivuješ.`,
+  saved: 'Uloženo. Běh počítá z téhle konfigurace a nahrané soubory jsou v archivu.',
+  removed: (count: number) => `Odebráno ${count} záznamů, které nový soubor už neobsahuje.`,
+  touchedChapters: (chapters: number[]) =>
+    `Nouzová oprava označila kapitoly ${chapters.join(', ')} jako dotčené. Nic se nepřepočítalo — rozhodni, co s nimi.`,
 
   chapters: 'Kapitoly',
   characters: 'Postavy',
@@ -30,31 +30,10 @@ export const importReport = Object.freeze({
   didYouMeanAfter: '?',
   row: (row: number) => `řádek ${row}`,
 
-  diffIdentical: 'Proti poslední verzi se nic nezměnilo.',
-  diffTitle: 'Proti poslední verzi',
-  diffCounts: (added: number, changed: number, removed: number) =>
-    `${added} přibylo · ${changed} změněno · ${removed} zmizelo`,
-  diffAdded: 'Přibylo',
-  diffChanged: 'Změnilo se',
-  diffRemoved: 'Zmizelo',
-  diffGroupTitle: (title: string, count: number) => `${title} (${count})`,
-  chapterSuffix: (chapter: number) => ` (kap. ${chapter})`,
-
   templatesTitle: 'Šablony postav',
   allTemplatesPresent: 'Každá postava má šablonu.',
   missingTemplates: (count: number) => `Chybí ${count} šablon.`,
   templateMissing: 'nenahraná',
   templateUnassigned: 'bez Template ID v tabulce',
   unmatchedTemplates: (filenames: string[]) => `Nahráno, ale nepatří žádné postavě: ${filenames.join(', ')}`,
-
-  entityLabels: Object.freeze<Record<EntityKind, string>>({
-    postava: 'postava',
-    skupina: 'skupina',
-    skala: 'škála',
-    pasmo: 'pásmo',
-    otazka: 'otázka',
-    odpoved: 'odpověď',
-    blok: 'blok',
-    varianta: 'varianta',
-  }),
 })

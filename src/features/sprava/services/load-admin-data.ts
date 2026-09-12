@@ -1,34 +1,37 @@
-import { forRun, listRuns, type RunSummary } from '@/db'
-import { configVersions } from '@/db/schema'
+import { forRun, listRuns, type RunScope, type RunSummary } from '@/db'
+import { uploadedFiles } from '@/db/schema'
+import { isConfigFrozen } from '@/import'
 import { errorMessage } from '@/utils/error-message'
-import type { VersionRow } from '../types/version-row'
+import type { ArchiveRow } from '../types/archive-row'
 
 export interface AdminData {
   runs: RunSummary[]
   runId?: string
   /** Newest first. */
-  versions: VersionRow[]
+  uploads: ArchiveRow[]
+  /** The run has a computation, so an upload is an emergency fix (§6.5). */
+  isConfigFrozen: boolean
   /** The database did not answer; checking a file still works without it. */
   failure?: string
 }
 
-const loadVersions = async (runId: string): Promise<VersionRow[]> => {
-  const rows = await forRun(runId).select(configVersions)
-  const versions: VersionRow[] = []
-  for (const row of rows) {
-    versions.push({
-      id: row.id,
-      version: row.version,
-      isActive: row.isActive,
-      sourceFilename: row.sourceFilename,
-      note: row.note,
-      createdAt: row.createdAt,
-      createdBy: row.createdBy,
-      importReport: row.importReport,
-    })
-  }
+/** Config first within one upload: its templates share the transaction's timestamp. */
+const byNewest = (a: ArchiveRow, b: ArchiveRow): number =>
+  b.createdAt.getTime() - a.createdAt.getTime() || Number(b.kind === 'konfigurace') - Number(a.kind === 'konfigurace')
 
-  return versions.sort((a, b) => b.version - a.version)
+const loadUploads = async (scope: RunScope): Promise<ArchiveRow[]> => {
+  const rows = await scope.selectColumns(uploadedFiles, {
+    id: uploadedFiles.id,
+    kind: uploadedFiles.kind,
+    filename: uploadedFiles.filename,
+    note: uploadedFiles.note,
+    reason: uploadedFiles.reason,
+    createdAt: uploadedFiles.createdAt,
+    createdBy: uploadedFiles.createdBy,
+    importReport: uploadedFiles.importReport,
+  })
+
+  return rows.sort(byNewest)
 }
 
 /** Defaults to the first run when none is selected. */
@@ -37,15 +40,17 @@ export const loadAdminData = async (requestedRunId: string | undefined): Promise
   try {
     runs = await listRuns()
   } catch (cause) {
-    return { runs, runId: requestedRunId, versions: [], failure: errorMessage(cause) }
+    return { runs, runId: requestedRunId, uploads: [], isConfigFrozen: false, failure: errorMessage(cause) }
   }
 
   const runId = requestedRunId ?? runs[0]?.id
-  if (!runId) return { runs, versions: [] }
+  if (!runId) return { runs, uploads: [], isConfigFrozen: false }
 
   try {
-    return { runs, runId, versions: await loadVersions(runId) }
+    const scope = forRun(runId)
+
+    return { runs, runId, uploads: await loadUploads(scope), isConfigFrozen: await isConfigFrozen(scope) }
   } catch (cause) {
-    return { runs, runId, versions: [], failure: errorMessage(cause) }
+    return { runs, runId, uploads: [], isConfigFrozen: false, failure: errorMessage(cause) }
   }
 }

@@ -2,15 +2,18 @@ import type { RunScope } from '@/db'
 import { blockVariations, contentBlocks } from '@/db/schema'
 import type { ParsedConfig } from '../types/parsed-config'
 import type { IdMap } from './entity-ids'
+import type { WrittenRows } from './written-rows'
 
 /** Blocks and their variants (layer 3, §8.2). */
 export const upsertBlocks = async (
   scope: RunScope,
   config: ParsedConfig,
-  versionId: string,
+  written: WrittenRows,
   characterIds: IdMap,
   chapterIds: IdMap<number>,
 ): Promise<IdMap> => {
+  const blockIds: IdMap = new Map()
+
   for (const [chapter, blocks] of config.blocks) {
     const chapterId = chapterIds.get(chapter)
     if (!chapterId) continue
@@ -19,22 +22,19 @@ export const upsertBlocks = async (
       const characterId = block.characterId ? characterIds.get(block.characterId) : undefined
       if (!characterId) continue
 
-      await scope
-        .insert(contentBlocks, {
-          externalId: block.externalId,
-          chapterId,
-          characterId,
-          sourceConfigVersionId: versionId,
-        })
+      const [row] = await scope
+        .insert(contentBlocks, { externalId: block.externalId, chapterId, characterId })
         .onConflictDoUpdate({
           target: [contentBlocks.runId, contentBlocks.externalId],
-          set: { chapterId, characterId, sourceConfigVersionId: versionId },
+          set: { chapterId, characterId },
         })
+        .returning({ id: contentBlocks.id })
+      if (!row) continue
+
+      written.contentBlocks.add(row.id)
+      blockIds.set(block.externalId, row.id)
     }
   }
-
-  const rows = await scope.select(contentBlocks)
-  const blockIds = new Map(rows.map((row) => [row.externalId, row.id]))
 
   for (const blocks of config.blocks.values()) {
     for (const block of blocks) {
@@ -50,9 +50,11 @@ export const upsertBlocks = async (
           conditionExpr: variation.condition.raw,
           conditionRefs: variation.condition.references,
         }
-        await scope
+        const [row] = await scope
           .insert(blockVariations, { externalId: variation.externalId, ...values })
           .onConflictDoUpdate({ target: [blockVariations.runId, blockVariations.externalId], set: values })
+          .returning({ id: blockVariations.id })
+        if (row) written.blockVariations.add(row.id)
       }
     }
   }

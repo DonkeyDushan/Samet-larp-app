@@ -11,9 +11,10 @@ import type { STRUCTURAL_EFFECT_KINDS } from '@/engine'
 import type { ParsedConfig } from '../types/parsed-config'
 import type { ParsedAnswerOption } from '../types/parsed-question'
 import type { EntityIds, IdMap } from './entity-ids'
+import type { WrittenRows } from './written-rows'
 
 type EffectRow = typeof effects.$inferInsert
-type EffectPayload = Omit<EffectRow, 'runId' | 'externalId' | 'sourceConfigVersionId' | 'ordinal' | 'answerOptionId'>
+type EffectPayload = Omit<EffectRow, 'runId' | 'externalId' | 'ordinal' | 'answerOptionId'>
 
 /** Sheet effect names (`SNATEK(Mirek)`) to engine effect kinds. */
 const STRUCTURAL_EFFECTS: Readonly<Record<string, (typeof STRUCTURAL_EFFECT_KINDS)[number]>> = Object.freeze({
@@ -26,9 +27,9 @@ const STRUCTURAL_EFFECTS: Readonly<Record<string, (typeof STRUCTURAL_EFFECT_KIND
 export const writeAnswerEffects = async (
   scope: RunScope,
   config: ParsedConfig,
+  written: WrittenRows,
   refs: EntityIds,
   optionIds: IdMap,
-  versionId: string,
 ): Promise<void> => {
   for (const list of config.questions.values()) {
     for (const question of list) {
@@ -42,15 +43,18 @@ export const writeAnswerEffects = async (
             runId: scope.runId,
             answerOptionId: optionId,
             externalId: `${option.externalId}#${ordinal}`,
-            sourceConfigVersionId: versionId,
             ordinal,
             ...payload,
           }
-          await scope.insert(effects, row).onConflictDoUpdate({
-            target: [effects.runId, effects.externalId],
-            // Drizzle cannot type `set` over the generic insert; keys are the table's own.
-            set: { ...row, runId: undefined, externalId: undefined } as never,
-          })
+          const [stored] = await scope
+            .insert(effects, row)
+            .onConflictDoUpdate({
+              target: [effects.runId, effects.externalId],
+              // Drizzle cannot type `set` over the generic insert; keys are the table's own.
+              set: { ...row, runId: undefined, externalId: undefined } as never,
+            })
+            .returning({ id: effects.id })
+          if (stored) written.effects.add(stored.id)
         }
       }
     }

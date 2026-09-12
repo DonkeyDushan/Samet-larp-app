@@ -14,7 +14,8 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authorName, createdAt } from './columns'
 import { computationKind, computationStatus } from './enums'
-import { chapters, configVersions, runs } from './runs'
+import { chapters, runs } from './runs'
+import { uploadedFiles } from './uploads'
 
 /**
  * One version of a computation (§5, steps 4–6).
@@ -45,8 +46,8 @@ export const computations = pgTable(
     status: computationStatus('status').notNull().default('navrh'),
     parentComputationId: uuid('parent_computation_id'),
 
-    /** The config used, so it can be traced back after the game. */
-    configVersionId: uuid('config_version_id').notNull(),
+    /** The archived `.xlsx` the config came from, so it can be traced after the game (§6.5). */
+    configUploadId: uuid('config_upload_id').notNull(),
     /** Engine code version, to tell what produced this. */
     engineVersion: text('engine_version').notNull(),
     /**
@@ -94,9 +95,9 @@ export const computations = pgTable(
       foreignColumns: [t.runId, t.id],
     }).onDelete('restrict'),
     foreignKey({
-      name: 'computations_config_version_fk',
-      columns: [t.runId, t.configVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
+      name: 'computations_config_upload_fk',
+      columns: [t.runId, t.configUploadId],
+      foreignColumns: [uploadedFiles.runId, uploadedFiles.id],
     }).onDelete('restrict'),
   ],
 )

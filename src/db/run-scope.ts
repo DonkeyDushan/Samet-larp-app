@@ -67,6 +67,18 @@ export class RunScope {
       .where(this.scoped(table, ...conditions)) as Promise<T['$inferSelect'][]>
   }
 
+  /** Like `select()`, but reads only the given columns — archived files and computation JSON are large. */
+  selectColumns<T extends RunScopedTable, F extends Record<string, PgColumn>>(
+    table: T,
+    fields: F,
+    ...conditions: (SQL | undefined)[]
+  ) {
+    return this.db
+      .select(fields)
+      .from(table as PgTable)
+      .where(this.scoped(table, ...conditions))
+  }
+
   /** Insert with `run_id` filled in automatically. */
   insert<T extends RunScopedTable>(table: T, values: InsertWithoutRun<T> | InsertWithoutRun<T>[]) {
     const rows = (Array.isArray(values) ? values : [values]).map((row) => ({
@@ -81,17 +93,26 @@ export class RunScope {
 
   /**
    * Run-scoped update. Most tables are never updated by design (rule 3); the
-   * legitimate cases are chapter state, the touched flag, switching the
-   * active config version, and editing an answer (whose history the audit holds).
+   * legitimate cases are chapter state, the touched flag, parking ordinals
+   * during a config import, and editing an answer (whose history the audit holds).
    */
   update<T extends RunScopedTable>(table: T, ...conditions: (SQL | undefined)[]) {
     return {
-      set: (values: Partial<T['$inferInsert']>) =>
+      set: (values: { [K in keyof T['$inferInsert']]?: T['$inferInsert'][K] | SQL }) =>
         this.db
           .update(table)
           .set(values as never)
           .where(this.scoped(table, ...conditions)),
     }
+  }
+
+  /**
+   * Run-scoped delete. Only the config import uses it, to drop entities a
+   * re-uploaded sheet no longer carries — and only before the first computation
+   * (§6.5). `restrict` foreign keys still protect anything entered against them.
+   */
+  delete<T extends RunScopedTable>(table: T, ...conditions: (SQL | undefined)[]) {
+    return this.db.delete(table).where(this.scoped(table, ...conditions))
   }
 
   /** Transaction under the same run scope. */

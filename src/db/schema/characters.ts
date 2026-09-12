@@ -7,7 +7,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { createdAt } from './columns'
-import { configVersions, runs } from './runs'
+import { runs } from './runs'
 
 /**
  * Group / organisation / gang (§4.1). Members and leadership are not here:
@@ -23,17 +23,11 @@ export const groups = pgTable(
     /** ID from the source spreadsheet, e.g. `G_SrdceParty`. */
     externalId: text('external_id').notNull(),
     name: text('name').notNull(),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
     unique('groups_run_id_key').on(t.runId, t.id),
     unique('groups_run_external_key').on(t.runId, t.externalId),
-    foreignKey({
-      name: 'groups_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
-    }).onDelete('restrict'),
   ],
 )
 
@@ -62,7 +56,6 @@ export const characters = pgTable(
     homeGroupId: uuid('home_group_id'),
     /** Document template ID from the `Characters` sheet (§4.2). */
     templateExternalId: text('template_external_id'),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -72,11 +65,6 @@ export const characters = pgTable(
       name: 'characters_home_group_fk',
       columns: [t.runId, t.homeGroupId],
       foreignColumns: [groups.runId, groups.id],
-    }).onDelete('restrict'),
-    foreignKey({
-      name: 'characters_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
     }).onDelete('restrict'),
   ],
 )

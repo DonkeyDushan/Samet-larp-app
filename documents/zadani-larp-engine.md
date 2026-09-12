@@ -91,7 +91,7 @@ Důvod tohoto pravidla: **během hry je zdrojem pravdy papír v rukou hráče, n
 
 Archivovaný běh zůstává **navždy prohlížitelný** včetně všech odpovědí, stavů, verzí přepočtu a trace (§2, bod 2). Nikdy se nemaže.
 
-**Konfigurace se váže na běh při jeho založení.** Dva souběžné běhy tak mohou mít různé verze otázek, pokud vznikly v jiný čas (§6.5). Aplikace u každého běhu ukazuje, kterou verzi konfigurace používá.
+**Každý běh má vlastní konfiguraci, nahranou při jeho založení** (§6.5). Dva souběžné běhy tak mohou mít různé otázky, pokud vznikly v jiný čas.
 
 ### 3.3 Oddělení dat běhů [ROZHODNUTO]
 
@@ -361,7 +361,7 @@ Důvod, proč je detail postavy správně: org přepisuje **jeden papírový dot
 - **Výstupy** — dvě záložky nad jedním výsledkem přepočtu:
   - _Přehled_ — stavy škál a pásma všech postav. Tady tabulka smysl dává.
   - _Dokumenty_ — vygenerované `.md`, tlačítko „Kopírovat do schránky" (§10.5), stažení zipu.
-- **Správa** — nahrání `.xlsx` a šablon, verze konfigurace, výsledky validací (§11), audit log. Věci, které se nedělají denně.
+- **Správa** — nahrání `.xlsx` a šablon, archiv nahraných souborů, výsledky validací (§11), audit log. Věci, které se nedělají denně.
 
 Sedm sekcí bylo zvažováno a **sloučeno na pět**. Výsledky a Dokumenty jsou dva pohledy na jeden výstup; Konfigurace a Audit jsou obojí správa, ne denní práce. Lišta se sedmi položkami se navíc nevejde do rozumné šířky.
 
@@ -370,9 +370,42 @@ Nástroj pro práci pod časovým tlakem, ne prezentační web. Hustá, dobře �
 
 Aplikace **smí být hezká a mít lehkou retro stylizaci** odkazující na prostředí hry (socialistické Československo) — hlavně v **barevné paletě**, tlumenými a mírně vybledlými odstíny, případně střídmou volbou písma. **Čistota a čitelnost mají ale přednost před stylizací.** Retro nese barva a typografie, ne textury, ozdobné rámečky ani grafika napodobující starý papír.
 
-### 6.5 Zmrazení otázek [ROZHODNUTO]
+### 6.5 Konfigurace se nastaví jednou a pak se nemění [ROZHODNUTO]
 
-**Otázky se nemění za běhu hry.** Konfigurace se při startu běhu zmrazí (verzuje). Změna v tabulce se do rozjetého běhu nepromítne, dokud ji org výslovně nenaimportuje jako novou verzi — a to se zapíše do auditu.
+**Verzování konfigurace bylo zvažováno a zamítnuto jako nadbytečné.** Průběh je jednodušší, než původní návrh předpokládal:
+
+```
+Příprava celé hry v tabulce (všechny tři kapitoly)
+        ↓
+Založení běhu → nahrání .xlsx a šablon → validace → chyby? → oprava v tabulce → nahrát znovu
+                                                   → v pořádku → běh startuje
+```
+
+**Před prvním přepočtem** se dá konfigurace nahrávat znovu a znovu bez ptaní. Je to fáze ladění, nic se nepřepisuje, protože ještě nic nevzniklo.
+
+**Po prvním přepočtu** je konfigurace zmrazená. Otázky, škály ani bloky se v rozjetém běhu nemění.
+
+Odpadá tím celá verzovací mašinérie: žádná tabulka verzí, žádný řetěz revizí, žádné porovnávání dvou importů proti sobě. Aplikace si drží **jednu platnou konfiguraci na běh**.
+
+#### Archiv místo verzí [ROZHODNUTO]
+
+Aby zůstala zachovaná auditovatelnost (§2, bod 2), aplikace si u každého importu **odloží nahraný soubor tak, jak přišel** — `.xlsx` i `.md` šablony, jako přílohy běhu.
+
+Je to levnější a úplnější než diff: po hře jde přesně dohledat, z čeho se počítalo, a nikdo nemusel psát porovnávací logiku.
+
+#### Když se konfigurace přece jen změnit musí
+
+**Celý běh je připravený předem.** Obsah všech tří kapitol, včetně šablon a bloků, je hotový dřív, než běh začne. Dopisování obsahu za chodu se nepočítá.
+
+Zbývá jediný důvod ke změně: **oprava chyby, která se ukáže až v průběhu** — překlep v textu bloku, špatně napsaná podmínka. Tu musí jít opravit, jinak by se s ní musel dohrát zbytek hry.
+
+Nahrání opravené konfigurace do rozjetého běhu proto **je možné**, ale:
+
+1. Vyžaduje potvrzení a důvod, obojí do auditu.
+2. Aplikace označí už spočítané kapitoly jako **`dotčené`** a nechá orga rozhodnout, co s nimi — stejný mechanismus jako u opravy odpovědi (§3.2).
+3. Původní soubor zůstává v archivu běhu.
+
+Je to nouzová cesta, ne součást běžného postupu.
 
 ### 6.6 Otázky jsou per postava [ROZHODNUTO]
 
@@ -641,11 +674,11 @@ Co tím odpadá — a je to hodně:
 
 ### 10.2 Vstup: konfigurace
 
-**Primárně jeden `.xlsx` soubor.** Google Sheet se stáhne přes _Soubor → Stáhnout → Microsoft Excel_, což zachová **všechny listy v jednom souboru**. Nahraje se do aplikace jedním přetažením.
+**Jeden `.xlsx` soubor, žádný jiný formát [ROZHODNUTO].** Google Sheet se stáhne přes _Soubor → Stáhnout → Microsoft Excel_, což zachová **všechny listy v jednom souboru**, a nahraje se do aplikace.
 
-_(Nahrání jednotlivých `.csv` je záložní cesta. Deset listů = deset souborů, což je zbytečně otravné. Aplikace to umí, ale nedoporučuje.)_
+Nahrávání jednotlivých `.csv` bylo zvažováno a zamítnuto — deset listů by znamenalo deset souborů a druhou cestu, kterou je třeba udržovat.
 
-Po importu je zdrojem pravdy databáze aplikace. Opakovaný import = nová verze konfigurace (§6.5) s diffem proti předchozí. Chybná konfigurace nesmí aplikaci shodit — vypíše se seznam chyb s odkazem na řádek a list.
+Po importu je zdrojem pravdy databáze aplikace. Do prvního přepočtu jde nahrávat opakovaně a volně, pak už jen výjimečně (§6.5). Chybná konfigurace nesmí aplikaci shodit — vypíše se seznam chyb s odkazem na řádek a list.
 
 ### 10.3 Vstup: šablony dokumentů
 
@@ -764,17 +797,17 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 
 **Kontext:** jeden vývojář, umí React, ochoten se doučit. Deadline ~3 měsíce. Malý objem dat, offline provoz.
 
-| Vrstva             | Volba                                | Proč                                                                                                              |
-| ------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| **Framework**      | **Next.js** (App Router, TypeScript) | React, který vývojář zná, plus server v jednom procesu. Jeden příkaz na spuštění, žádné oddělené backendové repo. |
-| **Databáze**       | **Postgres** (Neon)                  | §18.1. **Přístup k datům drž za tenkou vrstvou**, aby se dal poskytovatel vyměnit bez přepisování aplikace.       |
-| **Přístup k DB**   | **Drizzle ORM** nebo prosté SQL      | Malé schéma, není potřeba nic těžkého.                                                                            |
-| **Import tabulky** | **SheetJS (`xlsx`)**                 | Přečte `.xlsx` i `.csv` bez konfigurace.                                                                          |
-| **Google API**     | **V1 se nepoužívá** (§10.1)          | Fáze 2. Až na to dojde: `googleapis` + service account.                                                           |
-| **Zip**            | `jszip` nebo `archiver`              | Sbalení výstupních `.md` a `.xlsx` do jednoho archivu.                                                            |
-| **PDF**            | **Neřeší se**                        | Tisk je v Google Docs (§8.1).                                                                                     |
-| **UI**             | MUI + jednoduché komponenty          | Klasické rozvržení s horní lištou a levým panelem (§6.4). Priorita: hustota informací a rychlost, ne efekt.       |
-| **Testy**          | **Vitest** — jen na engine pravidel  | Zbytek se testuje ručně, engine ne. Viz níže.                                                                     |
+| Vrstva             | Volba                                | Proč                                                                                                                                                                 |
+| ------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Framework**      | **Next.js** (App Router, TypeScript) | React, který vývojář zná, plus server v jednom procesu. Jeden příkaz na spuštění, žádné oddělené backendové repo.                                                    |
+| **Databáze**       | **Postgres** (Neon)                  | §18.1. **Přístup k datům drž za tenkou vrstvou**, aby se dal poskytovatel vyměnit bez přepisování aplikace.                                                          |
+| **Přístup k DB**   | **Drizzle ORM** nebo prosté SQL      | Malé schéma, není potřeba nic těžkého.                                                                                                                               |
+| **Import tabulky** | **SheetJS (`xlsx`)**                 | Čte všechny listy `.xlsx` bez konfigurace.                                                                                                                           |
+| **Google API**     | **V1 se nepoužívá** (§10.1)          | Fáze 2. Až na to dojde: `googleapis` + service account.                                                                                                              |
+| **Zip**            | `jszip` nebo `archiver`              | Sbalení výstupních `.md` a `.xlsx` do jednoho archivu.                                                                                                               |
+| **PDF**            | **Neřeší se**                        | Tisk je v Google Docs (§8.1).                                                                                                                                        |
+| **UI**             | **MUI (Material UI)**                | Hotové komponenty pro rozvržení z §6.4: `AppBar`, `Tabs`, `Drawer`, `List`, formulářová pole. `DataGrid` pro tabulku v sekci Výstupy. Šetří čas, který patří enginu. |
+| **Testy**          | **Vitest** — jen na engine pravidel  | Zbytek se testuje ručně, engine ne. Viz níže.                                                                                                                        |
 
 **Architektonické pravidlo (nejdůležitější v tomhle dokumentu):**
 Engine pravidel (§7) je **čistá funkce v TypeScriptu**, bez databáze, bez sítě, bez Reactu:
@@ -789,7 +822,49 @@ Díky tomu jde otestovat na desítkách scénářů bez rozjetí aplikace a `tra
 
 **Nasazení:** propojené GitHub repo, `git push` = nasazeno (§18.1). Lokálně `npm run dev`.
 
-### 15.1 Harmonogram (3 měsíce, jeden člověk)
+### 15.1 MUI — na co si dát pozor [ROZHODNUTO]
+
+**Nastavení v Next.js App Routeru.** MUI potřebuje `AppRouterCacheProvider` z balíčku `@mui/material-nextjs`, jinak při načtení stránky problikne nestylovaný obsah. Komponenty MUI používají React Context, takže patří do `'use client'` stromu — server komponenty nechej na načítání dat.
+
+**Vlastní téma, ne výchozí Material.** Výchozí vzhled MUI je rozpoznatelný Material Design a neodpovídá tomu, co chceme (§6.4: hustá sazba, lehká retro paleta). Proto hned na začátku vytvoř `theme.ts` přes `createTheme`:
+
+- `palette` — tlumené, mírně vybledlé odstíny místo výchozí modré. Sem patří i barvy běhů A a B (§3.3).
+- `typography` — menší základní velikost písma, než má MUI ve výchozím stavu.
+- `components` — globální `defaultProps: { size: 'small', margin: 'dense' }` pro pole a tlačítka. Bez toho bude aplikace o třetinu rozvolněnější, než potřebujeme.
+- `colorSchemes` pro světlý a tmavý režim.
+
+**Uprav téma, ne jednotlivé komponenty.** První volba je vždy `theme.ts` — `palette`, `typography` a hlavně `components` s `defaultProps` a `styleOverrides`. Když mají všechna tlačítka vypadat jinak, změní se téma, ne tlačítka. Aplikace zůstane jednotná a změna vzhledu je záležitost jednoho souboru.
+
+#### Pravidla stylování [ROZHODNUTO]
+
+Nejsou to preference vzhledu, ale **výkonnostní požadavky**. `sx`, `styled()` s dynamickými props i inline `style` alokují nové objekty a spouštějí přepočet stylů při každém renderu. Ve stromech, které se překreslují často a po položkách — seznamy, karty, grafy, tooltipy, menu — se to sčítá do viditelného sekání na starším železe.
+
+- **Jen CSS Modules** — jeden `.module.css` na komponentu, vedle ní v jejím adresáři.
+- **Žádný `sx` prop** — zakázaný všude, i na komponentách MUI.
+- **Žádný `styled()` s dynamickými props** — žádné generování stylů za běhu v render cestě.
+- **Žádné inline `style` objekty v JSX.** Jediná výjimka je geometrie virtualizace (`transform`, `height`, `top`, `left`, `width` na absolutně pozicovaných řádcích) — to jsou hodnoty známé až za běhu, které do CSS Modules nepatří.
+- **Stavové styly přes data atributy**, ne přes podmíněné pole tříd:
+
+  ```tsx
+  <div
+    data-selected={isSelected}
+    data-compact={isCompact}
+    data-cancelled={isCancelled}
+    data-filtered-out={isFilteredOut}
+  >
+  ```
+
+  CSS cílí `[data-selected="true"]`. Čisté a bez režie v JS.
+
+- **`Typography` z MUI je v pořádku. Layoutové komponenty MUI (`Box`, `Stack`, `Grid`) jsou zakázané** ve stromech, které se často překreslují — karty, grafy, tooltipy, menu.
+
+Pravidla uplatňuj **globálně, ne jen v kritických místech.** Určovat u každé komponenty, jestli ještě leží v horké cestě, je víc práce než psát všechno stejně — a hranice se v průběhu vývoje stejně posouvá.
+
+**`DataGrid` jen v sekci Výstupy.** Je to velká komponenta; jinde stačí obyčejná `Table` nebo `List`. Zadávání odpovědí přes `DataGrid` nedělej — rozvržení z §6.4 je záměrně formulářové, ne mřížkové.
+
+**Indikátory vyplněnosti barvou i tvarem** (§6.4). MUI ikony to umožňují — `RadioButtonUnchecked`, `Adjust`, `CheckCircle` se liší tvarem, ne jen barvou.
+
+### 15.2 Harmonogram (3 měsíce, jeden člověk)
 
 | Týdny | Cíl                                                                                   |
 | ----- | ------------------------------------------------------------------------------------- |

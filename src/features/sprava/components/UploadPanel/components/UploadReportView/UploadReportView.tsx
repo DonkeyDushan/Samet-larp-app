@@ -7,7 +7,6 @@ import type { UploadReport } from '../../../../types/upload-report'
 import { buildRepairNotes } from '../../../../utils/build-repair-notes'
 import { splitIssuesBySeverity } from '../../../../utils/split-issues'
 import { Coverage } from './components/Coverage/Coverage'
-import { DiffView } from './components/DiffView/DiffView'
 import { IssueList } from './components/IssueList/IssueList'
 import { Repairs } from './components/Repairs/Repairs'
 import { Stat } from './components/Stat/Stat'
@@ -34,9 +33,20 @@ export const UploadReportView = ({ report }: { report: UploadReport }) => {
         </Typography>
       )}
 
-      {report.version !== undefined && (
+      {report.saved && (
         <Alert severity="success" data-testid="upload-report--saved">
-          {report.alreadyImported ? importReport.alreadyImported(report.version) : importReport.saved(report.version)}
+          {importReport.saved}
+          {report.removedCount ? (
+            <Typography variant="body2" component="p">
+              {importReport.removed(report.removedCount)}
+            </Typography>
+          ) : null}
+        </Alert>
+      )}
+
+      {report.touchedChapters && report.touchedChapters.length > 0 && (
+        <Alert severity="warning" data-testid="upload-report--touched">
+          {importReport.touchedChapters(report.touchedChapters)}
         </Alert>
       )}
 
@@ -70,7 +80,6 @@ export const UploadReportView = ({ report }: { report: UploadReport }) => {
         />
       )}
 
-      {report.diff && <DiffView diff={report.diff} />}
       {report.coverage && <Coverage coverage={report.coverage} />}
     </div>
   )

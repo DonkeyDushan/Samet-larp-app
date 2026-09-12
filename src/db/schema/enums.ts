@@ -111,6 +111,9 @@ export const computationKind = pgEnum('computation_kind', ['prepocet', 'rucni_up
 /** `navrh` is a dry-run (§5.4); documents are generated from a confirmed one. */
 export const computationStatus = pgEnum('computation_status', ['navrh', 'potvrzena'])
 
+/** What an archived upload holds (§6.5). */
+export const uploadKind = pgEnum('upload_kind', ['konfigurace', 'sablona'])
+
 /** Document template kind (§8.6). */
 export const templateKind = pgEnum('template_kind', [
   'postava',

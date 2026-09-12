@@ -1,6 +1,6 @@
 import type { Issue } from '@/import'
 
-/** Findings stored in `config_versions.import_report`. */
+/** Findings stored in `uploaded_files.import_report`. */
 export const extractIssues = (report: unknown): Issue[] => {
   if (!report || typeof report !== 'object' || !('issues' in report)) return []
 

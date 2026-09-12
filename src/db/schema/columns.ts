@@ -11,7 +11,10 @@
  * Domain state values are Czech without diacritics (§13), to keep accents out
  * of SQL literals.
  */
-import { timestamp, text } from 'drizzle-orm/pg-core'
+import { customType, timestamp, text } from 'drizzle-orm/pg-core'
+
+/** Raw file bytes; Drizzle 0.44 has no built-in `bytea`. */
+export const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' })
 
 export const createdAt = () =>
   timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()

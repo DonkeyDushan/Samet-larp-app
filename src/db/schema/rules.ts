@@ -22,7 +22,7 @@ import {
 import { characters, groups } from './characters'
 import { scaleBands, scales, flags } from './scales'
 import { answerOptions, questions } from './questions'
-import { chapters, configVersions, runs } from './runs'
+import { chapters, runs } from './runs'
 
 /**
  * A rule: `CONDITION → EFFECT [priority, weight]` (§7.1).
@@ -63,7 +63,6 @@ export const rules = pgTable(
     appliesOncePerHousehold: boolean('applies_once_per_household').notNull().default(false),
     /** Dice sides the rule requires (§7.4); NULL means no randomness. */
     diceSides: integer('dice_sides'),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -74,11 +73,6 @@ export const rules = pgTable(
       name: 'rules_chapter_fk',
       columns: [t.runId, t.chapterId],
       foreignColumns: [chapters.runId, chapters.id],
-    }).onDelete('restrict'),
-    foreignKey({
-      name: 'rules_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
     }).onDelete('restrict'),
   ],
 )
@@ -205,12 +199,6 @@ export const effects = pgTable(
      * re-import has to update them rather than add a second copy.
      */
     externalId: text('external_id').notNull(),
-    /**
-     * Which config version last wrote this effect. An effect the sheet no
-     * longer produces keeps its old stamp and drops out of the active version
-     * without being deleted (rule 3).
-     */
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
 
     kind: effectKind('kind').notNull(),
     /** Effect weight (§7.2); the result is a sum of weighted contributions. */
@@ -279,11 +267,6 @@ export const effects = pgTable(
       'effects_merge_needs_related',
       sql`${t.kind} <> 'domacnost_slouceni' or ${t.relatedCharacterId} is not null or ${t.relatedFromAnswer}`,
     ),
-    foreignKey({
-      name: 'effects_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
-    }).onDelete('restrict'),
     foreignKey({
       name: 'effects_rule_fk',
       columns: [t.runId, t.ruleId],

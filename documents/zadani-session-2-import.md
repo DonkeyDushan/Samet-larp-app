@@ -8,13 +8,15 @@ Projekt je inicializovaný, datové schéma stojí. Engine ještě neexistuje �
 
 ## Co se staví teď
 
-**Cesta od nahraného souboru k naplněné databázi, a kontrola, že to, co přišlo, dává smysl.**
+**Založení běhu, cesta od nahraného souboru k naplněné databázi, a kontrola, že to, co přišlo, dává smysl.**
 
 Bez tohohle nemá engine na čem běžet a autor hry nemá jak zjistit, že se v tabulce upsal.
 
 ## Vstup
 
-Autor hry stáhne Google Sheet přes _Soubor → Stáhnout → Microsoft Excel_. Vznikne **jeden `.xlsx` se všemi listy**. Ten se nahraje do aplikace přetažením.
+Autor hry stáhne Google Sheet přes _Soubor → Stáhnout → Microsoft Excel_. Vznikne **jeden `.xlsx` se všemi listy**. Ten se nahraje do aplikace.
+
+**Jiný formát se nepodporuje.** Žádné nahrávání jednotlivých `.csv` — `.xlsx` drží všechny listy v jednom souboru a není důvod mít druhou cestu.
 
 ### Listy v souboru
 
@@ -31,11 +33,22 @@ Konvence ID a formát sloupců jsou v §4.2 a §4.5. **Formát dopadu na škály
 ## Co má session dodat
 
 1. **Parser `.xlsx`** přes SheetJS. Čte všechny listy, mapuje je na tabulky ze schématu.
-2. **Verzování konfigurace.** Každý import je nová verze. Konfigurace se váže na běh při jeho založení (§6.5) — rozjetý běh se novým importem sám od sebe nezmění.
-3. **Diff proti předchozí verzi.** Co přibylo, zmizelo, změnilo se. Autor musí vidět dopad importu dřív, než ho potvrdí.
+2. **Jedna platná konfigurace na běh.** Žádné verzování, žádný diff (§6.5). Do prvního přepočtu jde nahrávat volně a opakovaně, poté už jen s potvrzením a důvodem do auditu.
+3. **Archiv nahraných souborů.** Každý nahraný `.xlsx` a `.md` se odloží tak, jak přišel, jako příloha běhu. Nahrazuje to verzování a je to levnější i úplnější.
 4. **Validace** (seznam níže) se zobrazeným výsledkem.
 5. **Nahrání šablon** jako `.md` souborů, víc najednou nebo v zipu. Přiřazení šablony k postavě podle ID, s přehledem, komu šablona chybí.
-6. **Obrazovka „Správa"** — nahrání souborů, historie verzí, výsledky validací.
+6. **Obrazovka „Správa“** — nahrání souborů, archiv nahraných souborů ke stažení, výsledky validací.
+
+### Založení běhu — dělá se tady
+
+**Běh musí existovat dřív, než má kam přistát konfigurace**, takže vzniká v téhle session, ne dřív a ne později. V session 1 byla jen tabulka `runs` ve schématu, žádná obrazovka.
+
+7. **Přihlášení**: jedno sdílené heslo a pole „Kdo jsi?“, uložené do prohlížeče (§3.1). Jméno se připojuje ke každému záznamu v auditu.
+8. **Založení běhu**: ID se generuje automaticky ve tvaru `2026-09-12_A` z data a písmene, vedle něj volitelný popisný název k přepsání (§3.2).
+9. **Seznam a přepínání běhů**: přepínač trvale v horní liště, **barevné odlišení běhu** (A modrá, B jantarová) z tématu (§3.3).
+10. **Stavy běhu a kapitol** jen jako datový základ: běh `založen` / `aktivní` / `archivován`, kapitola `rozpracovaná` / `spočítaná` / `vydaná`. Přecházení mezi nimi se řeší v pozdějších sessions, teď stačí, že se stav zobrazuje.
+
+**Každý dotaz do databáze už tady musí jít přes vrstvu vyžadující `runId`.** Je to první session, kde se s daty opravdu pracuje, takže se tu to pravidlo buď zavede, nebo se později dohání napříč celým projektem.
 
 ## Validace
 
@@ -61,6 +74,16 @@ Rozděl na **chyby** (blokují použití konfigurace) a **varování** (pustí d
 - Škála, se kterou nikdy nic nehýbe
 
 **Každá hláška musí říct, kde je problém: list, řádek, sloupec, hodnota.** „Neplatný odkaz na škálu" je nepoužitelné. „List `2_Questions`, řádek 34, sloupec `Scale Impact`: škála `S_Marie_Welth_osobni` neexistuje, mysleli jste `S_Marie_Wealth_osobni`?" je použitelné. Autor hry opravuje v tabulce a musí tam ten řádek najít.
+
+## UI téhle session
+
+Je to první obrazovka projektu, takže s ní vzniká i kostra rozhraní. **Postav ji rovnou správně**, předělávat ji později je dražší než ji napsat teď.
+
+- **MUI**, ne vlastní CSS. `AppRouterCacheProvider` z `@mui/material-nextjs`, jinak při načtení problískne nestylovaný obsah.
+- **Styluj přes CSS Modules a data atributy, nikdy přes `sx` ani inline `style`** (§15.1). Platí to od první komponenty — přepisovat to později znamená projít celý projekt.
+- **`theme.ts` s vlastní paletou** hned teď (§15.1): tlumené retro odstíny, menší základní písmo, globální `defaultProps: { size: 'small', margin: 'dense' }`, světlý i tmavý režim. Výchozí Material vzhled neodpovídá §6.4.
+- **Kostra rozvržení** z §6.4: `AppBar` s přepínačem běhu a pěti sekcemi, `Drawer` pro levý panel. Ostatní sekce můžou být zatím prázdné, ale navigace musí stát.
+- **Chyby validace zobraz jako seznam, který se dá procházet a filtrovat**, ne jako zed’ textu. Jich budou desítky a autor je prochází s tabulkou otevřenou vedle.
 
 ## Na co si dát pozor
 

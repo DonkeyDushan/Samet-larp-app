@@ -12,7 +12,7 @@ import type { ImportResult } from './types/import-result'
 import type { Workbook } from './types/parsed-config'
 import type { UploadedTemplate } from './types/parsed-template'
 import { validateConfig } from './validate/validate-config'
-import { readWorkbook, workbookFromCsvFiles } from './workbook'
+import { readWorkbook } from './workbook'
 
 /** Parses and validates a workbook that is already in memory. */
 export const importWorkbook = (workbook: Workbook, uploadedTemplates: UploadedTemplate[] = []): ImportResult => {
@@ -33,12 +33,6 @@ export const importWorkbook = (workbook: Workbook, uploadedTemplates: UploadedTe
   }
 }
 
-/** The primary path: one `.xlsx` with every sheet. */
+/** One `.xlsx` with every sheet — the only accepted format. */
 export const importXlsx = (data: ArrayBuffer | Uint8Array, templates: UploadedTemplate[] = []): ImportResult =>
   importWorkbook(readWorkbook(data), templates)
-
-/** The fallback path: one `.csv` per sheet. */
-export const importCsvFiles = (
-  files: { filename: string; text: string }[],
-  templates: UploadedTemplate[] = [],
-): ImportResult => importWorkbook(workbookFromCsvFiles(files), templates)

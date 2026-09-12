@@ -1,119 +1,110 @@
 /**
  * Writing a checked config into the database (§6.5, §10.2).
  *
- *  - **Every import is a new version.** `config_versions` grows; nothing is
- *    ever replaced. A version carries the import report and the diff, so the
- *    admin screen can show what an import did long after the fact.
- *  - **A new version does not change a running game by itself** (§6.5). The
- *    version is written inactive and the org activates it deliberately.
- *  - **Nothing is deleted.** Config entities are keyed by their source ID, so a
- *    re-import updates them in place and stamps `source_config_version_id`.
- *    An entity the sheet no longer carries keeps its old stamp and so drops out
- *    of the active set without a single delete.
+ *  - **One valid config per run.** Entities are upserted by source ID and rows
+ *    the sheet no longer carries are removed, so a re-upload never duplicates
+ *    anything nor leaves stale entities for the engine.
+ *  - **Before the first computation** uploading is free: nothing derived from
+ *    the config exists yet.
+ *  - **After it** the config is frozen. An upload is an emergency fix: it needs
+ *    a reason, may not remove an authored entity (derived answer effects may
+ *    go), and marks computed chapters as touched.
+ *  - **Every uploaded file is archived as it arrived** — the archive, not
+ *    versions, is what makes the config traceable after the game.
  *
  * All access goes through `forRun(runId)` — architecture rule 2.
  */
 import { forRun, type RunScope } from '@/db'
-import { auditLog, configVersions } from '@/db/schema'
-import { configSnapshot, diffSnapshots, type ConfigDiff, type EntitySnapshot } from '../diff'
-import { fingerprintConfig } from '../fingerprint'
+import { auditLog } from '@/db/schema'
+import { audit } from '@/locales/cs/audit'
+import { errors } from '@/locales/cs/errors'
 import type { Issue } from '../types/issue'
 import type { ParsedConfig } from '../types/parsed-config'
+import type { UploadedFile } from '../types/uploaded-file'
+import { listLabels } from '../utils/list-labels'
+import { archiveUpload } from './archive-upload'
+import { isConfigFrozen } from './is-config-frozen'
+import { parkOrdinals } from './park-ordinals'
+import { findStaleRows, removeStaleRows, staleAuthoredLabels } from './remove-stale-rows'
+import { touchComputedChapters } from './touch-computed-chapters'
 import { writeEntities } from './write-entities'
 
 export interface PersistInput {
   runId: string
   config: ParsedConfig
   issues: Issue[]
-  sourceFilename: string
+  /** The `.xlsx` exactly as uploaded. */
+  configFile: UploadedFile
+  /** Template files exactly as uploaded (`.md` or `.zip`). */
+  templateFiles: UploadedFile[]
   /** Free-text name from the „Kdo jsi?" field (§3.1). */
   author: string
   note?: string
+  /** Required once the run has a computation (§6.5). */
+  reason?: string
 }
 
 export interface PersistResult {
-  configVersionId: string
-  version: number
-  diff: ConfigDiff
-  /** True when an identical version already existed and nothing was written. */
-  alreadyImported: boolean
+  configUploadId: string
+  removedCount: number
+  /** Chapters an emergency fix marked as touched. */
+  touchedChapters: number[]
 }
 
-/**
- * Writes a new config version. Refuses a config with errors: a broken config
- * must never reach the database, only the report (§10.2).
- */
+/** Refuses a config with errors: a broken config must never reach the database (§10.2). */
 export const persistConfig = async (input: PersistInput): Promise<PersistResult> => {
-  if (input.issues.some((i) => i.severity === 'chyba')) {
-    throw new Error(
-      'Konfigurace obsahuje chyby a nedá se uložit. Oprav je v tabulce a nahraj soubor znovu.',
-    )
-  }
+  if (input.issues.some((issue) => issue.severity === 'chyba')) throw new Error(errors.configHasErrors)
 
-  const hash = fingerprintConfig(input.config)
-  const snapshot = configSnapshot(input.config)
+  const reason = input.reason?.trim() ?? ''
 
   return forRun(input.runId).transaction(async (scope) => {
-    const versions = await scope.select(configVersions)
-    const diff = diffSnapshots(newestSnapshot(versions), snapshot)
+    const frozen = await isConfigFrozen(scope)
+    if (frozen && reason === '') throw new Error(errors.reasonRequiredWhenFrozen)
 
-    // Re-uploading the same sheet must not duplicate anything (§10.2).
-    const existing = versions.find((v) => v.sourceHash === hash)
-    if (existing) {
-      return { configVersionId: existing.id, version: existing.version, diff, alreadyImported: true }
-    }
+    const configUploadId = await archiveUpload(scope, {
+      configFile: input.configFile,
+      templateFiles: input.templateFiles,
+      importReport: { issues: input.issues, repairs: input.config.repairs },
+      author: input.author,
+      note: input.note,
+      reason,
+    })
 
-    const nextNumber = versions.reduce((max, v) => Math.max(max, v.version), 0) + 1
+    await parkOrdinals(scope)
+    const written = await writeEntities(scope, input.config)
+    const stale = await findStaleRows(scope, written)
 
-    const [created] = await scope
-      .insert(configVersions, {
-        version: nextNumber,
-        // §6.5: a running game does not change until the org says so.
-        isActive: false,
-        sourceFilename: input.sourceFilename,
-        sourceHash: hash,
-        diffFromPrevious: diff,
-        contentSnapshot: snapshot,
-        importReport: { issues: input.issues, repairs: input.config.repairs },
-        note: input.note ?? null,
-        createdBy: input.author,
-      })
-      .returning()
-    if (!created) throw new Error('Verzi konfigurace se nepodařilo založit.')
+    const dropped = staleAuthoredLabels(stale)
+    if (frozen && dropped.length > 0) throw new Error(errors.removalWhenFrozen(listLabels(dropped)))
 
-    await writeEntities(scope, input.config, created.id)
-    await writeImportAudit(scope, input, created.id, nextNumber, hash, diff)
+    const removedCount = await removeStaleRows(scope, stale)
+    const touchedChapters = frozen ? await touchComputedChapters(scope, reason) : []
 
-    return { configVersionId: created.id, version: nextNumber, diff, alreadyImported: false }
+    const result: PersistResult = { configUploadId, removedCount, touchedChapters }
+    await writeImportAudit(scope, input, result, frozen ? reason : undefined)
+
+    return result
   })
 }
 
-type ConfigVersionRow = typeof configVersions.$inferSelect
-
-/** Snapshot of the newest stored version, or undefined on a first import. */
-export const newestSnapshot = (versions: ConfigVersionRow[]): EntitySnapshot[] | undefined => {
-  let newest: ConfigVersionRow | undefined
-  for (const version of versions) {
-    if (!newest || version.version > newest.version) newest = version
-  }
-
-  return (newest?.contentSnapshot as EntitySnapshot[] | null | undefined) ?? undefined
-}
-
+/** `emergencyReason` is set only for a fix to a frozen config. */
 const writeImportAudit = async (
   scope: RunScope,
   input: PersistInput,
-  versionId: string,
-  version: number,
-  hash: string,
-  diff: ConfigDiff,
+  result: PersistResult,
+  emergencyReason: string | undefined,
 ): Promise<void> => {
+  const filename = input.configFile.filename
+
   await scope.insert(auditLog, {
-    action: 'konfigurace.import',
-    entityKind: 'config_version',
-    entityId: versionId,
-    summary: `Import konfigurace ze souboru ${input.sourceFilename}: verze ${version}, ${diff.counts.added} přibylo, ${diff.counts.changed} změněno, ${diff.counts.removed} zmizelo.`,
-    valueAfter: { version, hash, counts: diff.counts },
+    action: emergencyReason ? 'konfigurace.nouzova_oprava' : 'konfigurace.import',
+    entityKind: 'uploaded_files',
+    entityId: result.configUploadId,
+    summary: emergencyReason
+      ? audit.configEmergencyFix(filename, result.touchedChapters)
+      : audit.configImport(filename, result.removedCount),
+    valueAfter: { removedCount: result.removedCount, touchedChapters: result.touchedChapters },
+    reason: emergencyReason ?? null,
     author: input.author,
   })
 }

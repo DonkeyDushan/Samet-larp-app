@@ -12,7 +12,8 @@ export const useUploadReport = () => {
   const [report, setReport] = useState<UploadReport | undefined>()
   const [pending, startTransition] = useTransition()
 
-  const canSave = !pending && (report === undefined || report.ok)
+  // Not `report.ok`: a failed save (missing name, refused removal) says nothing about the file.
+  const canSave = !pending && (report === undefined || report.errorCount === 0)
 
   const handleCheck = useCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

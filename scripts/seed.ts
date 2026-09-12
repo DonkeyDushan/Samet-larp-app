@@ -8,9 +8,8 @@
  * `_osobni` / `_spolecny` pair of accounts (§4.4), an org paired question
  * (§6.7), and marriage as a structural rule effect (§7.3).
  *
- * Re-runnable: it first drops the run `2026-09-12_A` if it exists. This is the
- * only place in the project that deletes data, and only because it is a seed
- * run in a local database.
+ * Re-runnable: it first drops the run `2026-09-12_A` if it exists — allowed only
+ * because it is a seed run in a local database.
  */
 import 'dotenv/config'
 import { eq, sql } from 'drizzle-orm'
@@ -18,14 +17,19 @@ import { unscopedDb, rawSql } from '../src/db/client'
 import type { RunScopedTable } from '../src/db/run-scope'
 import {
   answerOptions,
+  answerSelectedOptions,
+  answers,
   auditLog,
+  blockVariations,
   characterFlags,
   characterScaleValues,
   characterScales,
   characterVariables,
   characters,
   chapters,
-  configVersions,
+  computations,
+  contentBlocks,
+  diceRolls,
   effects,
   flags,
   groupMemberships,
@@ -39,6 +43,8 @@ import {
   scaleBands,
   scales,
   runs,
+  templates,
+  uploadedFiles,
 } from '../src/db/schema'
 
 const RUN_ID = '2026-09-12_A'
@@ -142,24 +148,39 @@ const wipeSeedRun = async () => {
     householdMemberships,
     households,
     groupMemberships,
+    diceRolls,
+    answerSelectedOptions,
+    answers,
+    computations,
     effects,
     ruleConditions,
     rules,
     answerOptions,
     questions,
+    blockVariations,
+    contentBlocks,
+    templates,
     characterScales,
     scaleBands,
     scales,
     flags,
     characters,
     groups,
+    uploadedFiles,
     chapters,
-    configVersions,
   ]
-  for (const table of order) {
-    await unscopedDb.delete(table).where(eq(table.runId, RUN_ID))
-  }
-  await unscopedDb.delete(runs).where(eq(runs.id, RUN_ID))
+
+  await unscopedDb.transaction(async (tx) => {
+    // The append-only trigger (`db/sql/001_audit_append_only.sql`) would refuse
+    // the audit delete. `alter table` holds an exclusive lock until commit, so
+    // nothing else can touch `audit_log` while the trigger is off.
+    await tx.execute(sql`alter table audit_log disable trigger user`)
+    for (const table of order) {
+      await tx.delete(table).where(eq(table.runId, RUN_ID))
+    }
+    await tx.delete(runs).where(eq(runs.id, RUN_ID))
+    await tx.execute(sql`alter table audit_log enable trigger user`)
+  })
 }
 
 const main = async () => {
@@ -174,20 +195,6 @@ const main = async () => {
     createdBy: AUTHOR,
   })
 
-  const [configVersion] = await unscopedDb
-    .insert(configVersions)
-    .values({
-      runId: RUN_ID,
-      version: 1,
-      isActive: true,
-      sourceFilename: 'seed.xlsx',
-      sourceHash: 'seed',
-      note: 'Ukázková data ze seed skriptu, ne skutečná konfigurace hry.',
-      createdBy: AUTHOR,
-    })
-    .returning()
-  if (!configVersion) throw new Error('Nepodařilo se založit verzi konfigurace.')
-  const configVersionId = configVersion.id
 
   // All three chapters are created with the run so config import has something
   // to attach questions to (§3.2).
@@ -204,7 +211,6 @@ const main = async () => {
       runId: RUN_ID,
       externalId: 'G_SrdceParty',
       name: 'Srdce party',
-      sourceConfigVersionId: configVersionId,
     })
     .returning()
   if (!srdceParty) throw new Error('Nepodařilo se založit skupinu.')
@@ -220,7 +226,6 @@ const main = async () => {
         birthYear: 1955,
         homeGroupId: srdceParty.id,
         templateExternalId: 'T_Marie',
-        sourceConfigVersionId: configVersionId,
       },
       {
         runId: RUN_ID,
@@ -230,7 +235,6 @@ const main = async () => {
         birthYear: 1952,
         homeGroupId: srdceParty.id,
         templateExternalId: 'T_Karel',
-        sourceConfigVersionId: configVersionId,
       },
       {
         runId: RUN_ID,
@@ -240,7 +244,6 @@ const main = async () => {
         birthYear: 1953,
         homeGroupId: srdceParty.id,
         templateExternalId: 'T_Mirek',
-        sourceConfigVersionId: configVersionId,
       },
     ])
     .returning()
@@ -290,7 +293,6 @@ const main = async () => {
         scope: definition.scope,
         mergeStrategy: definition.mergeStrategy ?? null,
         splitStrategy: definition.splitStrategy ?? null,
-        sourceConfigVersionId: configVersionId,
       })
       .returning()
     if (!scale) throw new Error(`Nepodařilo se založit škálu ${definition.key}.`)
@@ -321,7 +323,6 @@ const main = async () => {
         key: flag.key,
         label: flag.label,
         description: flag.description,
-        sourceConfigVersionId: configVersionId,
       })),
     )
     .returning()
@@ -344,7 +345,6 @@ const main = async () => {
       scaleId,
       externalId: `S_Marie_${key}`,
       initialValue,
-      sourceConfigVersionId: configVersionId,
     })
 
     // A shared value belongs to the household, a character scale to the character (§4.4).
@@ -415,14 +415,13 @@ const main = async () => {
     .insert(questions)
     .values({
       runId: RUN_ID,
-      externalId: 'Q_Marie1_1',
+      externalId: 'Q_Marie_1_1',
       chapterId: chapter1.id,
       characterId: marie.id,
       ordinal: 1,
       type: 'single',
       source: 'hrac',
       text: 'Kdo z party se stal vedoucím směny?',
-      sourceConfigVersionId: configVersionId,
     })
     .returning()
   if (!leaderQuestion) throw new Error('Nepodařilo se založit otázku o vedení směny.')
@@ -461,7 +460,6 @@ const main = async () => {
       answerOptionId: optionKarel.id,
       ordinal: 1,
       externalId: `${optionKarel.externalId}#1`,
-      sourceConfigVersionId: configVersionId,
       kind: 'zmena_skaly',
       characterId: marie.id,
       scaleId: scaleIdByKey.get('Wealth_osobni')!,
@@ -472,7 +470,6 @@ const main = async () => {
       answerOptionId: optionKarel.id,
       ordinal: 2,
       externalId: `${optionKarel.externalId}#2`,
-      sourceConfigVersionId: configVersionId,
       kind: 'zmena_skaly',
       characterId: marie.id,
       scaleId: scaleIdByKey.get('Wealth_spolecny')!,
@@ -483,7 +480,6 @@ const main = async () => {
       answerOptionId: optionMarie.id,
       ordinal: 1,
       externalId: `${optionMarie.externalId}#1`,
-      sourceConfigVersionId: configVersionId,
       kind: 'zmena_skaly',
       characterId: marie.id,
       scaleId: scaleIdByKey.get('Control')!,
@@ -495,7 +491,6 @@ const main = async () => {
       answerOptionId: optionMarie.id,
       ordinal: 2,
       externalId: `${optionMarie.externalId}#2`,
-      sourceConfigVersionId: configVersionId,
       kind: 'blok',
       characterId: marie.id,
       blockExternalId: 'MARIE_VEDENI_SMENY',
@@ -509,7 +504,7 @@ const main = async () => {
     .insert(questions)
     .values({
       runId: RUN_ID,
-      externalId: 'Q_Marie1_2',
+      externalId: 'Q_Marie_1_2',
       chapterId: chapter1.id,
       characterId: marie.id,
       ordinal: 2,
@@ -518,7 +513,6 @@ const main = async () => {
       isPaired: true,
       text: 'Provdala se Marie, a za koho?',
       helpText: 'Zadává org po poradě. Tatáž odpověď se zobrazí i u druhé postavy.',
-      sourceConfigVersionId: configVersionId,
     })
     .returning()
   if (!marriageQuestion) throw new Error('Nepodařilo se založit párovou otázku o sňatku.')
@@ -559,7 +553,6 @@ const main = async () => {
         'Postava, která se stala vedoucím směny, přebírá vedení Srdce party. Kdo to je, určuje odpověď.',
       priority: 100,
       weight: '1',
-      sourceConfigVersionId: configVersionId,
     })
     .returning()
   if (!leaderRule) throw new Error('Nepodařilo se založit pravidlo o vedení.')
@@ -583,7 +576,6 @@ const main = async () => {
     ruleId: leaderRule.id,
     ordinal: 1,
     externalId: `${leaderRule.externalId}#1`,
-    sourceConfigVersionId: configVersionId,
     kind: 'vedeni',
     groupId: srdceParty.id,
     groupRole: 'vedouci',
@@ -603,7 +595,6 @@ const main = async () => {
       weight: '1',
       // A wedding hits the household as a whole, not each member (§4.4).
       appliesOncePerHousehold: true,
-      sourceConfigVersionId: configVersionId,
     })
     .returning()
   if (!marriageRule) throw new Error('Nepodařilo se založit pravidlo o sňatku.')
@@ -626,7 +617,6 @@ const main = async () => {
       ruleId: marriageRule.id,
       ordinal: 1,
       externalId: `${marriageRule.externalId}#1`,
-      sourceConfigVersionId: configVersionId,
       kind: 'domacnost_slouceni',
       characterId: marie.id,
       // The partner comes from the answer, so no rule per pair of 23 characters.
@@ -637,7 +627,6 @@ const main = async () => {
       ruleId: marriageRule.id,
       ordinal: 2,
       externalId: `${marriageRule.externalId}#2`,
-      sourceConfigVersionId: configVersionId,
       kind: 'priznak',
       characterId: marie.id,
       flagId: flagIdByKey.get('Svatba')!,
@@ -648,7 +637,6 @@ const main = async () => {
       ruleId: marriageRule.id,
       ordinal: 3,
       externalId: `${marriageRule.externalId}#3`,
-      sourceConfigVersionId: configVersionId,
       kind: 'priznak',
       characterId: marie.id,
       flagId: flagIdByKey.get('Spolecny_ucet')!,
@@ -659,7 +647,6 @@ const main = async () => {
       ruleId: marriageRule.id,
       ordinal: 4,
       externalId: `${marriageRule.externalId}#4`,
-      sourceConfigVersionId: configVersionId,
       kind: 'blok',
       characterId: marie.id,
       blockExternalId: 'MARIE_SVATBA',
@@ -669,9 +656,9 @@ const main = async () => {
   await unscopedDb.insert(auditLog).values({
     runId: RUN_ID,
     action: 'konfigurace.import',
-    entityKind: 'config_versions',
-    entityId: configVersionId,
-    summary: 'Seed: založen ukázkový běh s verzí konfigurace 1.',
+    entityKind: 'runs',
+    entityId: RUN_ID,
+    summary: 'Seed: založen ukázkový běh.',
     author: AUTHOR,
   })
 

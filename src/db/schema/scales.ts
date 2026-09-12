@@ -11,7 +11,7 @@ import {
 import { createdAt } from './columns'
 import { mergeStrategy, scaleScope, splitStrategy } from './enums'
 import { characters } from './characters'
-import { configVersions, runs } from './runs'
+import { runs } from './runs'
 
 /**
  * Scale definition (§4.1), e.g. `Wealth`, `Regime`, `Control`, `Bony`.
@@ -43,7 +43,6 @@ export const scales = pgTable(
     mergeStrategy: mergeStrategy('merge_strategy'),
     /** Split on divorce or death; `domacnost` scales only. */
     splitStrategy: splitStrategy('split_strategy'),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -59,11 +58,6 @@ export const scales = pgTable(
       'scales_household_strategies',
       sql`(${t.scope} = 'domacnost') = (${t.mergeStrategy} is not null and ${t.splitStrategy} is not null)`,
     ),
-    foreignKey({
-      name: 'scales_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
-    }).onDelete('restrict'),
   ],
 )
 
@@ -119,7 +113,6 @@ export const characterScales = pgTable(
     externalId: text('external_id').notNull(),
     /** Starting value for chapter 1 (§4.2, `Characters` sheet). */
     initialValue: integer('initial_value').notNull(),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -136,11 +129,6 @@ export const characterScales = pgTable(
       name: 'character_scales_scale_fk',
       columns: [t.runId, t.scaleId],
       foreignColumns: [scales.runId, scales.id],
-    }).onDelete('restrict'),
-    foreignKey({
-      name: 'character_scales_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
     }).onDelete('restrict'),
   ],
 )
@@ -159,16 +147,10 @@ export const flags = pgTable(
     key: text('key').notNull(),
     label: text('label').notNull(),
     description: text('description'),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
     unique('flags_run_id_key').on(t.runId, t.id),
     unique('flags_run_key_key').on(t.runId, t.key),
-    foreignKey({
-      name: 'flags_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
-    }).onDelete('restrict'),
   ],
 )

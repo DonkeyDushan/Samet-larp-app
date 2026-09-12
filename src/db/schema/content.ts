@@ -11,7 +11,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { createdAt } from './columns'
 import { characters } from './characters'
-import { chapters, configVersions, runs } from './runs'
+import { chapters, runs } from './runs'
 
 /**
  * A template block from the `N_Content` sheet (§8.2) — the thing a
@@ -32,7 +32,6 @@ export const contentBlocks = pgTable(
     externalId: text('external_id').notNull(),
     chapterId: uuid('chapter_id').notNull(),
     characterId: uuid('character_id').notNull(),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -47,11 +46,6 @@ export const contentBlocks = pgTable(
       name: 'content_blocks_character_fk',
       columns: [t.runId, t.characterId],
       foreignColumns: [characters.runId, characters.id],
-    }).onDelete('restrict'),
-    foreignKey({
-      name: 'content_blocks_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
     }).onDelete('restrict'),
   ],
 )

@@ -14,7 +14,7 @@ import { authorName, createdAt } from './columns'
 import { questionSource, questionType } from './enums'
 import { characters } from './characters'
 import { scales } from './scales'
-import { chapters, configVersions, runs } from './runs'
+import { chapters, runs } from './runs'
 
 /**
  * Question (§6.1, §6.6). Questions are per character — there is no shared set,
@@ -33,7 +33,7 @@ export const questions = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** Source ID `Q_<Postava><Kapitola>_<Poradi>`, e.g. `Q_Marie1_1`. */
+    /** Source ID `Q_<Postava>_<Kapitola>_<Poradi>`, e.g. `Q_Marie_1_1`. */
     externalId: text('external_id').notNull(),
     chapterId: uuid('chapter_id').notNull(),
     characterId: uuid('character_id').notNull(),
@@ -56,7 +56,6 @@ export const questions = pgTable(
     scaleId: uuid('scale_id'),
     /** Allows `_OTHER_`: free text the org fills in by hand (§4.2). */
     allowOther: boolean('allow_other').notNull().default(false),
-    sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -93,11 +92,6 @@ export const questions = pgTable(
       name: 'questions_scale_fk',
       columns: [t.runId, t.scaleId],
       foreignColumns: [scales.runId, scales.id],
-    }).onDelete('restrict'),
-    foreignKey({
-      name: 'questions_config_version_fk',
-      columns: [t.runId, t.sourceConfigVersionId],
-      foreignColumns: [configVersions.runId, configVersions.id],
     }).onDelete('restrict'),
   ],
 )

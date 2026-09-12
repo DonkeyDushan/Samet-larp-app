@@ -2,7 +2,7 @@
 import Alert from '@mui/material/Alert'
 import { RunHeader, RunThemeRoot } from '@/components'
 import { RUN_QUERY_PARAM } from '@/core'
-import { loadAdminData, UploadPanel, VersionHistory } from '@/features/sprava'
+import { loadAdminData, UploadArchive, UploadPanel } from '@/features/sprava'
 import { errors } from '@/locales/cs/errors'
 import { sprava } from '@/locales/cs/sprava'
 import { runThemeKey } from '@/theme/run-theme'
@@ -16,7 +16,7 @@ interface SpravaPageProps {
 
 const SpravaPage = async ({ searchParams }: SpravaPageProps) => {
   const params = await searchParams
-  const { runs, runId, versions, failure } = await loadAdminData(params[RUN_QUERY_PARAM])
+  const { runs, runId, uploads, isConfigFrozen, failure } = await loadAdminData(params[RUN_QUERY_PARAM])
 
   return (
     <RunThemeRoot themeKey={runThemeKey(runId)}>
@@ -35,9 +35,9 @@ const SpravaPage = async ({ searchParams }: SpravaPageProps) => {
           </Alert>
         )}
 
-        <UploadPanel runId={runId ?? ''} />
+        <UploadPanel runId={runId ?? ''} isConfigFrozen={isConfigFrozen} />
 
-        {runId && <VersionHistory runId={runId} versions={versions} />}
+        {runId && <UploadArchive uploads={uploads} />}
       </main>
     </RunThemeRoot>
   )

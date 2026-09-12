@@ -13,18 +13,20 @@ malý — **optimalizuj na srozumitelnost, ne na výkon.**
 
 ## Kde si zadání odporuje samo se sebou
 
-Zadání vznikalo postupně a tři místa zůstala z dřívějšího návrhu. **Platí vždy
+Zadání vznikalo postupně a několik míst zůstalo z dřívějšího návrhu. **Platí vždy
 konkrétní revidovaná sekce, ne souhrnná tabulka.** Fixtures v `documents/` to
 potvrzují.
 
 | Zastaralé místo | Co říká | Co platí |
 |---|---|---|
-| §16, řádek 12 | značky `{BLOK}`…`{/BLOK}` jsou párové, nevybrané bloky se mažou ze šablony | **§8.2 + §8.4:** značky jsou **nepárové**, varianty textu žijí v listu `N_Content` |
+| §16, řádek 12 a §15.2, týden 10 | značky `{BLOK}`…`{/BLOK}` jsou párové, nevybrané bloky se mažou ze šablony | **§8.2 + §8.4:** značky jsou **nepárové**, varianty textu žijí v listu `N_Content` |
 | §7.1 a §15 | podmínky pravidel se zapisují strukturovaně do listu `N_Conditions` | **§4.5:** podmínky jsou **výrazy v jedné buňce**, parsuje je knihovna |
 | §15 | „nepiš parser, začni strukturovanými sloupci" | **§4.5:** ten návrh je výslovně **zrušen** — autor hlasoval tím, jak tabulku píše |
+| §10.3 | šablony se nahrávají „jednou za kapitolu" | **§6.5:** celý běh včetně šablon všech tří kapitol je připravený a nahraný **předem** |
+| §4.2 | ID otázky `Q_<Postava><Kapitola>_<Poradi>` (`Q_Marie1_1`) | **Fixtures:** `Q_<Postava>_<Kapitola>_<Poradi>` (`Q_Marie_1_1`), stejně jako u odpovědí |
 
 §8.2 i §4.5 ten obrat samy pojmenovávají („Upraveno podle reálného listu
-`2_Content`", „Dřívější návrh … se tím ruší"). Když na některé z těch tří míst
+`2_Content`", „Dřívější návrh … se tím ruší"). Když na některé z těch míst
 narazíš, **neřiď se jím.**
 
 ## Tři architektonická pravidla
@@ -73,7 +75,7 @@ dialogy u zásadních akcí vždy jmenují běh („Uzamknout kapitolu 2 běhu
   pustit stokrát.
 - Stav postav je snapshot na kapitolu s vazbou na verzi přepočtu
   (`computation_id`). Nepřepisuje se.
-- Nová šablona nebo konfigurace = nová verze, stará zůstává.
+- Každý nahraný `.xlsx` i `.md` se odloží **tak, jak přišel**, do archivu běhu.
 - Všechny cizí klíče jsou `on delete restrict`. **Archivovaný běh se nikdy nemaže**
   a zůstává navždy prohlížitelný včetně odpovědí, stavů a trace.
 - `audit_log` je **append-only** a vynucuje to databázový trigger
@@ -81,11 +83,31 @@ dialogy u zásadních akcí vždy jmenují běh („Uzamknout kapitolu 2 běhu
   zapsáno kdo (volné jméno z pole „Kdo jsi?"), kdy, co, hodnota před a po
   a které pravidlo změnu způsobilo.
 
-Jediné místo, které smí mazat, je seed skript — a jen svůj vlastní lokální běh.
+Mazat smí jen dvě místa: seed skript (jen svůj lokální běh) a import konfigurace
+**před prvním přepočtem**, který odebere entity, jež nový soubor už neobsahuje
+(`RunScope.delete`).
 
-**Důsledek pro import:** konfigurační entity se při reimportu **neaktualizují
-mazáním**. Každá nese `source_config_version_id`; entita, kterou nová verze už
-nepřinesla, si nechá starý otisk a tím vypadne z aktivní sady. Nic se nemaže.
+## Konfigurace se nastaví jednou a pak se nemění (§6.5)
+
+**Verzování konfigurace je zamítnuté.** Žádná tabulka verzí, žádná aktivace
+verze, žádný diff dvou importů. Běh má **jednu platnou konfiguraci** (otázky,
+škály, bloky, šablony pro všechny tři kapitoly), připravenou celou předem.
+
+| Kdy | Nahrání konfigurace |
+|---|---|
+| Před prvním přepočtem | volně a opakovaně, bez ptaní — fáze ladění, ještě nic nevzniklo; entity, které nový soubor už neobsahuje, se smažou (když na ně navazují zadané odpovědi, import odmítne) |
+| Po prvním přepočtu | konfigurace je zmrazená; nahrání je **nouzová cesta** pro opravu chyby (překlep v bloku, vadná podmínka) a nesmí odebrat nic, co autor napsal (odvozené efekty odpovědí ano) |
+
+Nouzová oprava v rozjetém běhu:
+
+1. vyžaduje **potvrzení a důvod**, obojí do auditu,
+2. označí už spočítané kapitoly jako **`dotčené`** — stejný mechanismus jako
+   oprava odpovědi (kaskáda), sama nic nepřepočítá,
+3. původní soubor zůstává v archivu běhu.
+
+Auditovatelnost místo verzí nese **archiv nahraných souborů** (`uploaded_files`,
+každý přepočet na něj odkazuje `config_upload_id`) — po hře jde přesně dohledat,
+z čeho se počítalo.
 
 ## Technologie [ROZHODNUTO]
 
@@ -94,7 +116,7 @@ nepřinesla, si nechá starý otisk a tím vypadne z aktivní sady. Nic se nema�
 | Framework | Next.js, App Router, TypeScript |
 | Databáze | Postgres (Neon), lokálně `scripts/pg.sh` nebo Docker |
 | ORM | Drizzle |
-| UI | MUI (Material UI) + vlastní jednoduché komponenty; styly v CSS Modules přes data atributy, bez `sx` a inline stylů |
+| UI | MUI (Material UI) s vlastním tématem; styly v theme `components`, jinak CSS Modules přes data atributy, bez `sx` a inline stylů |
 | Testy | Vitest, primárně na engine pravidel a import |
 | Import tabulek | SheetJS (`xlsx`) |
 | Výrazy v podmínkách | `jsep` |
@@ -108,6 +130,40 @@ záložní režim.
 
 PDF se negeneruje — tiskne se z Google Docs. Round-trip přes Markdown je
 ověřený na reálném dokumentu (§8.5), formátování se zachovává.
+
+## MUI (§15.1)
+
+- **Nastavení v App Routeru:** `AppRouterCacheProvider` z `@mui/material-nextjs`,
+  jinak problikne nestylovaný obsah. MUI komponenty patří do `'use client'`
+  stromu, server komponenty zůstávají na načítání dat.
+- **Vlastní téma, ne výchozí Material** (`src/theme/theme.ts`, `createTheme`):
+  - `palette` — tlumené, mírně vybledlé odstíny; patří sem i barvy běhů A a B,
+  - `typography` — menší základní písmo než výchozí MUI,
+  - `components` — globálně `defaultProps: { size: 'small', margin: 'dense' }`
+    pro pole a tlačítka, jinak je aplikace o třetinu rozvolněnější,
+  - `colorSchemes` pro světlý a tmavý režim.
+- **Uprav téma, ne jednotlivé komponenty.** První volba je vždy `components`
+  v theme (`defaultProps`, `styleOverrides`, `variants`). Když mají všechna
+  tlačítka vypadat jinak, změní se téma, ne tlačítka.
+- **Pravidla stylování** — výkonnostní požadavek, ne preference vzhledu
+  (`sx`, `styled()` i inline `style` alokují a přepočítávají styly při každém
+  renderu):
+  - **CSS Modules** — jeden `.module.css` na komponentu, v jejím adresáři,
+  - **žádný `sx`** — nikde, ani na komponentách MUI,
+  - **žádný `styled()` s dynamickými props**,
+  - **žádné inline `style` objekty** — jediná výjimka je geometrie virtualizace
+    (`transform`, `height`, `top`, `left`, `width`),
+  - **stavové styly přes data atributy** (`data-selected={isSelected}`,
+    CSS cílí `[data-selected="true"]`), ne podmíněná pole tříd,
+  - `Typography` z MUI je v pořádku; **`Box`, `Stack`, `Grid` ne** ve stromech,
+    které se často překreslují (seznamy, karty, tooltipy, menu).
+
+  Pravidla platí **globálně**, ne jen v horkých cestách — hranice se během
+  vývoje posouvá a rozhodovat to u každé komponenty je víc práce.
+- **`DataGrid` jen v sekci Výstupy.** Jinde `Table` nebo `List`; zadávání
+  odpovědí je záměrně formulářové, ne mřížkové.
+- **Indikátor vyplněnosti barvou i tvarem:** ikony `RadioButtonUnchecked` /
+  `Adjust` / `CheckCircle`.
 
 ## Čtyři vrstvy logiky — pravidlo píš až jako poslední
 
@@ -309,9 +365,9 @@ nešla omylem obejít.
 Kód je v `src/import/`, čisté funkce bez databáze — celá cesta od souboru
 k hlášením jde otestovat na fixtures v `documents/`.
 
-- **Primárně jeden `.xlsx`** se všemi listy (Google Sheet → *Stáhnout →
-  Microsoft Excel*). Jednotlivé `.csv` jsou záložní cesta; v UI ji nenabízej
-  jako první volbu.
+- **Jeden `.xlsx` se všemi listy, žádný jiný formát** (Google Sheet →
+  *Stáhnout → Microsoft Excel*). Nahrávání jednotlivých `.csv` je **zamítnuté**
+  (§10.2) — druhá cesta, kterou by bylo nutné udržovat.
 - **Chybná konfigurace nikdy nesmí shodit aplikaci.** Parser sbírá všechny chyby
   a vrátí je najednou, nekončí na první. Autor chce opravit dvacet překlepů
   v jednom kole.
@@ -320,11 +376,11 @@ k hlášením jde otestovat na fixtures v `documents/`.
   sloupec `Scale Impact`: škála `S_Marie_Welth_osobni` neexistuje, mysleli jste
   `S_Marie_Wealth_osobni`?" je použitelné.
 - **Chyby blokují** použití konfigurace, **varování pustí dál**.
-- **Import je idempotentní.** Dvojí nahrání téhož souboru nesmí nic zdvojit —
-  verze se pozná podle otisku obsahu, ne podle názvu souboru ani bajtů (Google
-  Sheets přepíše soubor při každém stažení).
-- **Každý import je nová verze** a **nový import sám nepřepne rozjetý běh**
-  (§6.5). Aktivace verze je vědomý krok a jde do auditu.
+- **Import je idempotentní.** Opakované nahrání nesmí nic zdvojit — konfigurace
+  běhu je vždy jen jedna.
+- **Po prvním přepočtu je import nouzová cesta** s potvrzením, důvodem
+  a označením `dotčené` (viz „Konfigurace se nastaví jednou" výše). Soubor
+  se v každém případě odloží do archivu běhu.
 - **Fill-down sloučených buněk.** `Character` a `Block ID` jsou vyplněné jen na
   prvním řádku skupiny; parser musí hodnotu dopěstovat dolů. Prázdný řádek
   skupinu ukončuje.
@@ -402,14 +458,18 @@ Výrazy v `Conditions` se v importu **jen načtou, uloží a zkontrolují syntak
 - **Jméno postavy nikdy natvrdo v textech** — ani v textech variant. Sňatek mění
   příjmení; všude `{JMENO}` / `{PRIJMENI}`, rozvine se až při naplnění
   dokumentu. Totéž platí pro názvy skupin a funkcí.
-- **Kaskáda:** změna odpovědi ve vydané kapitole označí následující kapitoly jako
-  `dotčené`. Aplikace **sama nic nepřepočítá** — vynutí si rozhodnutí orga
+- **Kaskáda:** změna odpovědi ve vydané kapitole (nebo nouzová oprava
+  konfigurace) označí dotčené kapitoly jako `dotčené`. Aplikace **sama nic nepřepočítá** — vynutí si rozhodnutí orga
   (přepočítat / ponechat jak je). Při „ponechat" si zapíše, že se výpočet
   a vydaný stav rozcházejí, a proč. Během hry je zdrojem pravdy **papír v rukou
   hráče**, ne databáze.
 - **Uzamčení kapitoly není nikdy nevratné.** Stav `vydaná` je měkká pojistka
   proti překlepu; editace vyžaduje potvrzení a důvod, obojí do auditu.
 - **„Běh", ne „session".** Slovo session je v kódu obsazené přihlašovací relací.
+- **Přihlášení je jedno sdílené heslo** (povinné, aplikace je na veřejném
+  internetu) plus pole „Kdo jsi?" uložené v prohlížeči. Žádné účty ani role (§3.1).
+- **Zálohování je tlačítko „Zazálohovat"** — konzistentní snapshot ke stažení,
+  po každé vydané kapitole. Na Drive patří snapshoty, nikdy živá databáze (§18.5).
 
 ## Rozvržení aplikace (§6.4)
 
@@ -423,6 +483,9 @@ Mřížka byla zvažována a zamítnuta — při 23 postavách nic neušetří.
 - **Levý panel:** seznam postav se jménem, skupinou a indikátorem vyplněnosti
   (**barva plus tvar**, ne jen barva), nahoře souhrn „Vyplněno 14 / 23",
   hledání a filtr „jen nevyplněné". Panel si drží pozici při přepínání.
+- **Výstupy** mají dvě záložky nad jedním přepočtem: _Přehled_ (tabulka škál
+  a pásem) a _Dokumenty_. **Správa** drží nahrání `.xlsx` a šablon, archiv
+  nahraných souborů, výsledky validací a audit log.
 - **Hlavní plocha:** dotazník postavy, pod ním aktuální stav škál. **Automatické
   ukládání** po každé změně s viditelným potvrzením — žádné tlačítko „Uložit".
   Tlačítko **„Hotovo a další nevyplněná"** je hlavní cesta procházení, má
@@ -493,8 +556,7 @@ fyzické materiály připravené mimo systém.
   Drizzle generuje `CREATE UNIQUE INDEX` až za `ALTER TABLE ADD CONSTRAINT
   ... FOREIGN KEY`, takže FK na `(run_id, id)` by v migraci neměl na co ukázat
   a migrace spadne. `uniqueIndex()` zůstává jen pro **částečné** unikáty
-  s `.where()`, které constraint neumí (aktivní verze konfigurace, vydaný přepočet,
-  aktivní šablona).
+  s `.where()`, které constraint neumí (např. jeden vydaný přepočet na kapitolu).
 - Testy pokrývají primárně **engine a import**. Zbytek se testuje ručně. Výjimka:
   `src/db/schema.test.ts` hlídá architektonické pravidlo 2.
 - Fixtures pro import jsou v `documents/`: `fixture-platny.xlsx` musí projít,

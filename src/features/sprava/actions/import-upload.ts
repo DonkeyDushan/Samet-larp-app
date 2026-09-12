@@ -11,7 +11,7 @@ import { failedReport } from '../utils/failed-report'
 import { inspectUpload } from '../utils/inspect-upload'
 import { readFormField } from '../utils/read-form-field'
 
-/** Checks and, when there is no error, writes a new config version. */
+/** Checks and, when there is no error, makes the upload the run's config. */
 export const importUpload = async (formData: FormData): Promise<UploadReport> => {
   const author = readFormField(formData, UPLOAD_FIELDS.author).trim()
   if (author === '') return failedReport(errors.authorRequiredForImport)
@@ -26,13 +26,15 @@ export const importUpload = async (formData: FormData): Promise<UploadReport> =>
       runId: readFormField(formData, UPLOAD_FIELDS.runId),
       config: upload.imported.config,
       issues: upload.imported.issues,
-      sourceFilename: upload.filename,
+      configFile: upload.configFile,
+      templateFiles: upload.templateFiles,
       author,
       note: readFormField(formData, UPLOAD_FIELDS.note) || undefined,
+      reason: readFormField(formData, UPLOAD_FIELDS.reason) || undefined,
     })
     revalidatePath(SPRAVA_ROUTE)
 
-    return { ...report, version: persisted.version, alreadyImported: persisted.alreadyImported, diff: persisted.diff }
+    return { ...report, saved: true, removedCount: persisted.removedCount, touchedChapters: persisted.touchedChapters }
   } catch (cause) {
     return { ...report, ok: false, failure: errorMessage(cause) }
   }

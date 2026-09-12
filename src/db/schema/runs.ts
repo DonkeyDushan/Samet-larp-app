@@ -3,12 +3,10 @@ import {
   boolean,
   check,
   integer,
-  jsonb,
   pgTable,
   text,
   timestamp,
   unique,
-  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { authorName, createdAt } from './columns'
@@ -36,50 +34,6 @@ export const runs = pgTable(
   (t) => [
     check('runs_id_format', sql`${t.id} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Z]$'`),
     check('runs_letter_format', sql`${t.letter} ~ '^[A-Z]$'`),
-  ],
-)
-
-/**
- * A version of the imported config (§6.5, §10.2).
- *
- * Bound to a run: two concurrent runs may have different question versions.
- * Re-importing creates a new version with a diff against the previous one; the
- * old one is never overwritten. Exactly one version is active, enforced by a
- * partial unique index.
- */
-export const configVersions = pgTable(
-  'config_versions',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    runId: text('run_id')
-      .notNull()
-      .references(() => runs.id, { onDelete: 'restrict' }),
-    version: integer('version').notNull(),
-    /** The version the run computes from. Exactly one per run. */
-    isActive: boolean('is_active').notNull().default(false),
-    sourceFilename: text('source_filename').notNull(),
-    /** Detects a re-import of identical content. */
-    sourceHash: text('source_hash').notNull(),
-    /** Diff against the previous version, for the admin screen. */
-    diffFromPrevious: jsonb('diff_from_previous'),
-    /**
-     * Flat snapshot of what this version contains, so the next import can diff
-     * against it without re-parsing the old upload.
-     */
-    contentSnapshot: jsonb('content_snapshot'),
-    /** Import errors and warnings, pointing at sheet and row (§10.2). */
-    importReport: jsonb('import_report'),
-    note: text('note'),
-    createdAt: createdAt(),
-    createdBy: authorName('created_by'),
-  },
-  (t) => [
-    unique('config_versions_run_id_key').on(t.runId, t.id),
-    unique('config_versions_run_version_key').on(t.runId, t.version),
-    uniqueIndex('config_versions_one_active_per_run')
-      .on(t.runId)
-      .where(sql`${t.isActive}`),
-    check('config_versions_version_positive', sql`${t.version} >= 1`),
   ],
 )
 

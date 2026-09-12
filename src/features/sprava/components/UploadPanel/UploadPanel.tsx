@@ -1,6 +1,7 @@
 'use client'
 
 /** Upload form and the report it produces (§10.2). */
+import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
@@ -13,7 +14,13 @@ import { useUploadReport } from '../../hooks/useUploadReport'
 import { UploadReportView } from './components/UploadReportView/UploadReportView'
 import styles from './UploadPanel.module.css'
 
-export const UploadPanel = ({ runId }: { runId: string }) => {
+interface UploadPanelProps {
+  runId: string
+  /** After the first computation an upload is an emergency fix (§6.5). */
+  isConfigFrozen: boolean
+}
+
+export const UploadPanel = ({ runId, isConfigFrozen }: UploadPanelProps) => {
   const [author, setAuthor] = useState('')
   const { report, pending, canSave, handleCheck, handleSave } = useUploadReport()
 
@@ -29,6 +36,12 @@ export const UploadPanel = ({ runId }: { runId: string }) => {
         <code>{sprava.uploadHintFormat}</code>
         {sprava.uploadHintAfter}
       </Typography>
+
+      {isConfigFrozen && (
+        <Alert severity="warning" className={styles.frozen} data-testid="upload-panel--frozen">
+          {sprava.frozenWarning(runId)}
+        </Alert>
+      )}
 
       <form className={styles.form} onSubmit={handleCheck} data-testid="upload-form">
         <input type="hidden" name={UPLOAD_FIELDS.runId} value={runId} />
@@ -63,21 +76,6 @@ export const UploadPanel = ({ runId }: { runId: string }) => {
           </Typography>
         </label>
 
-        <details className={styles.fallback}>
-          <summary className={styles.fallbackSummary}>{sprava.csvFallbackSummary}</summary>
-          <input
-            type="file"
-            name={UPLOAD_FIELDS.configCsv}
-            accept={UPLOAD_ACCEPT.configCsv}
-            multiple
-            className={styles.fileInput}
-            data-testid="upload-form--csv"
-          />
-          <Typography variant="caption" component="p" className={styles.hint}>
-            {sprava.csvFallbackHint}
-          </Typography>
-        </details>
-
         <AuthorField
           name={UPLOAD_FIELDS.author}
           value={author}
@@ -85,6 +83,17 @@ export const UploadPanel = ({ runId }: { runId: string }) => {
           hint={sprava.authorHint}
           testId="upload-form--author"
         />
+
+        {/* Enforced on the server, so checking a file never asks for a reason. */}
+        {isConfigFrozen && (
+          <TextField
+            name={UPLOAD_FIELDS.reason}
+            label={sprava.reasonLabel}
+            fullWidth
+            multiline
+            slotProps={{ htmlInput: { 'data-testid': 'upload-form--reason' } }}
+          />
+        )}
 
         <TextField
           name={UPLOAD_FIELDS.note}
@@ -105,7 +114,7 @@ export const UploadPanel = ({ runId }: { runId: string }) => {
             onClick={handleSave}
             data-testid="upload-form--save"
           >
-            {sprava.save}
+            {isConfigFrozen ? sprava.saveEmergency(runId) : sprava.save}
           </Button>
         </div>
       </form>

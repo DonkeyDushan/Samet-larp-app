@@ -20,7 +20,7 @@ import { chapters, runs } from './runs'
  *
  * Org decisions land here too, not just data changes: a scale clamped at a
  * bound, a re-rolled die, an edit to a released chapter and its reason, a
- * cascade decision, an import of a new config version.
+ * cascade decision, a config import and its reason when it is an emergency fix.
  */
 export const auditLog = pgTable(
   'audit_log',

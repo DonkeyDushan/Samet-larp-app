@@ -1,4 +1,4 @@
-import type { ConfigDiff, ImportRepairs, Issue, TemplateCoverage } from '@/import'
+import type { ImportRepairs, Issue, TemplateCoverage } from '@/import'
 
 export interface UploadCounts {
   characters: number
@@ -18,12 +18,14 @@ export interface UploadReport {
   repairs?: ImportRepairs
   chapters?: number[]
   counts?: UploadCounts
-  diff?: ConfigDiff
   coverage?: TemplateCoverage
   ignoredSheets?: string[]
   /** Set when the config was written. */
-  version?: number
-  alreadyImported?: boolean
+  saved?: boolean
+  /** Rows the new sheet no longer carried. */
+  removedCount?: number
+  /** Chapters an emergency fix marked as touched (§6.5). */
+  touchedChapters?: number[]
   /** Set when something went wrong outside validation. */
   failure?: string
 }

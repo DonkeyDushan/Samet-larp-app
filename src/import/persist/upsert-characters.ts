@@ -2,36 +2,41 @@ import type { RunScope } from '@/db'
 import { characterScales, characters } from '@/db/schema'
 import type { ParsedConfig } from '../types/parsed-config'
 import type { IdMap } from './entity-ids'
+import type { WrittenRows } from './written-rows'
 
 export const upsertCharacters = async (
   scope: RunScope,
   config: ParsedConfig,
-  versionId: string,
+  written: WrittenRows,
   groupIds: IdMap,
 ): Promise<IdMap> => {
+  const characterIds: IdMap = new Map()
+
   for (const character of config.characters) {
     const values = {
       firstName: character.firstName,
       lastName: character.lastName,
       homeGroupId: groupIds.get(character.groupName) ?? null,
       templateExternalId: character.templateExternalId || null,
-      sourceConfigVersionId: versionId,
     }
-    await scope
+    const [row] = await scope
       .insert(characters, { externalId: character.externalId, ...values })
       .onConflictDoUpdate({ target: [characters.runId, characters.externalId], set: values })
+      .returning({ id: characters.id })
+    if (!row) continue
+
+    written.characters.add(row.id)
+    characterIds.set(character.externalId, row.id)
   }
 
-  const rows = await scope.select(characters)
-
-  return new Map(rows.map((row) => [row.externalId, row.id]))
+  return characterIds
 }
 
 /** Chapter-1 starting values from the `Characters` sheet (§4.2). */
 export const upsertCharacterScales = async (
   scope: RunScope,
   config: ParsedConfig,
-  versionId: string,
+  written: WrittenRows,
   characterIds: IdMap,
   scaleIds: IdMap,
 ): Promise<void> => {
@@ -43,18 +48,19 @@ export const upsertCharacterScales = async (
       const scaleId = scaleIds.get(key)
       if (!scaleId) continue
 
-      await scope
+      const [row] = await scope
         .insert(characterScales, {
           characterId,
           scaleId,
           externalId: `S_${character.externalId}_${key}`,
           initialValue: entry.value,
-          sourceConfigVersionId: versionId,
         })
         .onConflictDoUpdate({
           target: [characterScales.runId, characterScales.characterId, characterScales.scaleId],
-          set: { initialValue: entry.value, sourceConfigVersionId: versionId },
+          set: { initialValue: entry.value },
         })
+        .returning({ id: characterScales.id })
+      if (row) written.characterScales.add(row.id)
     }
   }
 }

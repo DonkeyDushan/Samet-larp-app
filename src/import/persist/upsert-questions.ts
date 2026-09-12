@@ -3,13 +3,16 @@ import { answerOptions, questions } from '@/db/schema'
 import type { ParsedConfig } from '../types/parsed-config'
 import type { EntityIds, IdMap } from './entity-ids'
 import { writeAnswerEffects } from './write-answer-effects'
+import type { WrittenRows } from './written-rows'
 
 export const upsertQuestions = async (
   scope: RunScope,
   config: ParsedConfig,
-  versionId: string,
+  written: WrittenRows,
   refs: EntityIds,
 ): Promise<void> => {
+  const questionIds: IdMap = new Map()
+
   for (const [chapter, list] of config.questions) {
     const chapterId = refs.chapterIds.get(chapter)
     if (!chapterId) continue
@@ -31,27 +34,32 @@ export const upsertQuestions = async (
             ? (refs.scaleIds.get(question.scaleKey) ?? null)
             : null,
         allowOther: question.options.some((o) => o.isOther),
-        sourceConfigVersionId: versionId,
       }
-      await scope
+      const [row] = await scope
         .insert(questions, { externalId: question.externalId, ...values })
         .onConflictDoUpdate({ target: [questions.runId, questions.externalId], set: values })
+        .returning({ id: questions.id })
+      if (!row) continue
+
+      written.questions.add(row.id)
+      questionIds.set(question.externalId, row.id)
     }
   }
 
-  const questionRows = await scope.select(questions)
-  const questionIds = new Map(questionRows.map((row) => [row.externalId, row.id]))
-  const optionIds = await upsertAnswerOptions(scope, config, refs.characterIds, questionIds)
+  const optionIds = await upsertAnswerOptions(scope, config, written, refs.characterIds, questionIds)
 
-  await writeAnswerEffects(scope, config, refs, optionIds, versionId)
+  await writeAnswerEffects(scope, config, written, refs, optionIds)
 }
 
 const upsertAnswerOptions = async (
   scope: RunScope,
   config: ParsedConfig,
+  written: WrittenRows,
   characterIds: IdMap,
   questionIds: IdMap,
 ): Promise<IdMap> => {
+  const optionIds: IdMap = new Map()
+
   for (const list of config.questions.values()) {
     for (const question of list) {
       const questionId = questionIds.get(question.externalId)
@@ -67,14 +75,17 @@ const upsertAnswerOptions = async (
             : null,
           isOther: option.isOther,
         }
-        await scope
+        const [row] = await scope
           .insert(answerOptions, { externalId: option.externalId, ...values })
           .onConflictDoUpdate({ target: [answerOptions.runId, answerOptions.externalId], set: values })
+          .returning({ id: answerOptions.id })
+        if (!row) continue
+
+        written.answerOptions.add(row.id)
+        optionIds.set(option.externalId, row.id)
       }
     }
   }
 
-  const rows = await scope.select(answerOptions)
-
-  return new Map(rows.map((row) => [row.externalId, row.id]))
+  return optionIds
 }
