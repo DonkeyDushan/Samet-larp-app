@@ -1,7 +1,4 @@
-/**
- * Zástupná stránka. Rozvržení aplikace (§6.4) se staví až po enginu —
- * harmonogram §15.1, týdny 6–7.
- */
+/** Placeholder page; the real layout (§6.4) comes after the engine. */
 export default function Page() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">

@@ -1,10 +1,9 @@
 /**
- * Engine pravidel (§7) — čistá funkce bez databáze, sítě a Reactu.
+ * Rules engine (§7) — a pure function, no database, network or React.
  *
- * V téhle session jsou hotové jen typy; implementace `evaluate` přijde
- * v další (harmonogram §15.1, týdny 3–5).
+ * Only the types exist so far; `evaluate` itself comes later (§15.1).
  */
 export * from './types'
 
-/** Verze enginu, která se zapisuje ke každému přepočtu (`computations.engine_version`). */
+/** Recorded with every computation (`computations.engine_version`). */
 export const ENGINE_VERSION = '0.0.0-schema'

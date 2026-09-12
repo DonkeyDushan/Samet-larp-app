@@ -1,17 +1,16 @@
 /**
- * Seed s ukázkovými daty — jeden běh, tři postavy, jedna skupina, pět škál.
+ * Sample data — one run, three characters, one group, five scales.
  *
- * Účel je mít v databázi tvar, na kterém jde vidět, jak do sebe tabulky
- * zapadají, a rozjet obrazovky, až přijdou. **Není to konfigurace hry** — ta
- * se v ostrém provozu importuje z `.xlsx` (§10.2).
+ * Its purpose is a shape in the database showing how the tables fit together.
+ * It is not the game's configuration: that is imported from `.xlsx` (§10.2).
  *
- * Data záměrně procvičují to, co je na modelu nejméně samozřejmé:
- * dvojici účtů `_osobni` / `_spolecny` (§4.4), organizátorskou párovou otázku
- * (§6.7) a sňatek jako strukturální efekt pravidla (§7.3).
+ * The data deliberately exercises the least obvious parts of the model: the
+ * `_osobni` / `_spolecny` pair of accounts (§4.4), an org paired question
+ * (§6.7), and marriage as a structural rule effect (§7.3).
  *
- * Spouští se opakovaně: nejdřív smaže běh `2026-09-12_A`, pokud existuje.
- * Je to jediné místo v celém projektu, které maže data, a smí to jen proto,
- * že jde o seedovací běh v lokální databázi.
+ * Re-runnable: it first drops the run `2026-09-12_A` if it exists. This is the
+ * only place in the project that deletes data, and only because it is a seed
+ * run in a local database.
  */
 import 'dotenv/config'
 import { eq, sql } from 'drizzle-orm'
@@ -45,7 +44,7 @@ import {
 const RUN_ID = '2026-09-12_A'
 const AUTHOR = 'seed skript'
 
-/** Výchozí rozdělení pásem 1–3 / 4–5 / 6–8 / 9–10 (§4.1). Názvy jsou per škála. */
+/** Default band split 1–3 / 4–5 / 6–8 / 9–10 (§4.1); names are per scale. */
 const BAND_BOUNDS = [
   { ordinal: 1, minValue: 1, maxValue: 3 },
   { ordinal: 2, minValue: 4, maxValue: 5 },
@@ -64,8 +63,8 @@ type ScaleSeed = {
 }
 
 /**
- * Soukromý i společný účet jsou **dvě samostatné škály** s různým rozsahem
- * platnosti, ne jedna přepínaná do sdíleného režimu (§4.4).
+ * The private and the joint account are two separate scales with different
+ * scopes, not one scale switched into shared mode (§4.4).
  */
 const SCALE_SEED: ScaleSeed[] = [
   {
@@ -80,8 +79,8 @@ const SCALE_SEED: ScaleSeed[] = [
     label: 'Majetek — společný',
     description: 'Společný účet domácnosti.',
     scope: 'domacnost',
-    // U peněz se sloučení ani rozdělení nedopočítává: kolik kdo do společného
-    // vložil, je otázka v dotazníku, ne dopočítaná hodnota (§4.4).
+    // Money is neither merged nor split automatically: how much each partner
+    // contributed is a question in the questionnaire (§4.4).
     mergeStrategy: 'otazka',
     splitStrategy: 'otazka',
     bandNames: ['Prázdný', 'Něco tam je', 'Slušná rezerva', 'Na auto'],
@@ -91,7 +90,7 @@ const SCALE_SEED: ScaleSeed[] = [
     label: 'Bony',
     description: 'Tuzexové bony domácnosti.',
     scope: 'domacnost',
-    // Naopak u bonů automatické sloučení smysl dává.
+    // For Bony, on the other hand, an automatic merge does make sense.
     mergeStrategy: 'soucet',
     splitStrategy: 'kopie',
     bandNames: ['Žádné', 'Pár', 'Zásoba', 'Hromada'],
@@ -123,7 +122,7 @@ const FLAG_SEED = [
   },
 ] as const
 
-/** Počáteční hodnoty škál Marie pro kapitolu 1 (list `Characters`, §4.2). */
+/** Marie's starting scale values for chapter 1 (`Characters` sheet, §4.2). */
 const MARIE_INITIAL: Record<string, number> = {
   Wealth_osobni: 4,
   Wealth_spolecny: 1,
@@ -133,7 +132,7 @@ const MARIE_INITIAL: Record<string, number> = {
 }
 
 async function wipeSeedRun() {
-  // Mazat v pořadí od závislých k nadřazeným — cizí klíče jsou `restrict`.
+  // Delete dependents first — the foreign keys are `restrict`.
   const order: RunScopedTable[] = [
     auditLog,
     characterVariables,
@@ -190,8 +189,8 @@ async function main() {
   if (!configVersion) throw new Error('Nepodařilo se založit verzi konfigurace.')
   const configVersionId = configVersion.id
 
-  // Všechny tři kapitoly vznikají hned se založením běhu, aby na ně mohla
-  // konfigurace navázat otázky (§3.2).
+  // All three chapters are created with the run so config import has something
+  // to attach questions to (§3.2).
   const chapterRows = await unscopedDb
     .insert(chapters)
     .values([1, 2, 3].map((number) => ({ runId: RUN_ID, number, status: 'rozpracovana' as const })))
@@ -251,9 +250,8 @@ async function main() {
   const mirek = byExternalId.get('Mirek')
   if (!marie || !karel || !mirek) throw new Error('Nepodařilo se založit postavy.')
 
-  // Každá postava dostane při založení běhu vlastní domácnost o jednom členovi.
-  // Svobodná postava tak drží sdílené hodnoty sama a engine nemá zvláštní
-  // větev pro „postavu bez domácnosti" (§4.4).
+  // Every character gets a household of one, so a single character holds shared
+  // values alone and the engine needs no "no household" branch (§4.4).
   const householdByCharacter = new Map<string, string>()
   for (const character of characterRows) {
     const [household] = await unscopedDb
@@ -277,7 +275,7 @@ async function main() {
     })
   }
 
-  // Škály a jejich pásma. Prahy i názvy jsou v datech, nikdy v kódu (§4.1).
+  // Scales and their bands. Thresholds and names live in data, never in code (§4.1).
   const scaleIdByKey = new Map<string, string>()
   const scopeByKey = new Map<string, 'postava' | 'domacnost'>()
   const bandIdByScaleAndOrdinal = new Map<string, string>()
@@ -337,9 +335,9 @@ async function main() {
   for (const [key, initialValue] of Object.entries(MARIE_INITIAL)) {
     const scaleId = scaleIdByKey.get(key)!
 
-    // `character_scales` zůstává registrem toho, které škály postava sleduje,
-    // i u sdílených — počáteční hodnota přichází z listu `Characters` za postavu
-    // a při založení běhu se promítne do její jednočlenné domácnosti.
+    // `character_scales` stays the registry of which scales a character tracks,
+    // shared ones included: the starting value comes per character from the
+    // `Characters` sheet and lands in that character's household of one.
     await unscopedDb.insert(characterScales).values({
       runId: RUN_ID,
       characterId: marie.id,
@@ -349,7 +347,7 @@ async function main() {
       sourceConfigVersionId: configVersionId,
     })
 
-    // Sdílená hodnota patří domácnosti, hodnota škály postavy postavě (§4.4).
+    // A shared value belongs to the household, a character scale to the character (§4.4).
     if (scopeByKey.get(key) === 'domacnost') {
       await unscopedDb.insert(householdScaleValues).values({
         runId: RUN_ID,
@@ -373,8 +371,8 @@ async function main() {
     }
   }
 
-  // Svobodná Marie společný účet technicky má, ale v dokumentu se neobjeví —
-  // zobrazení řídí příznak, ne existence hodnoty (§4.4).
+  // Single Marie technically has a joint account, but it stays out of the
+  // document: a flag drives display, not the existence of a value (§4.4).
   await unscopedDb.insert(characterFlags).values({
     runId: RUN_ID,
     chapterId: chapter1.id,
@@ -412,7 +410,7 @@ async function main() {
     },
   ])
 
-  // --- Otázka pro hráče (§6.6): vždy navázaná na konkrétní postavu ---------
+  // --- Player question (§6.6): always bound to one character ---------------
   const [leaderQuestion] = await unscopedDb
     .insert(questions)
     .values({
@@ -429,7 +427,7 @@ async function main() {
     .returning()
   if (!leaderQuestion) throw new Error('Nepodařilo se založit otázku o vedení směny.')
 
-  // Volba jmenující jinou postavu odkazuje na její ID, ne na volný text (§6.6).
+  // An option naming another character references their ID, not free text (§6.6).
   const leaderOptions = await unscopedDb
     .insert(answerOptions)
     .values([
@@ -455,8 +453,8 @@ async function main() {
   const optionMarie = leaderOptions.find((o) => o.externalId === 'A_Marie_1_1_Marie')
   if (!optionKarel || !optionMarie) throw new Error('Nepodařilo se založit volby odpovědi.')
 
-  // Vrstva 1 (§4.5): dopad odpovědi na škály, `S_Marie_Wealth_osobni+3`.
-  // Zároveň ukázka převodu mezi účty — jeden efekt nad dvěma škálami (§4.4).
+  // Layer 1 (§4.5): an answer's scale impact, `S_Marie_Wealth_osobni+3`. Also
+  // shows a transfer between accounts — one effect over two scales (§4.4).
   await unscopedDb.insert(effects).values([
     {
       runId: RUN_ID,
@@ -485,7 +483,7 @@ async function main() {
       scaleId: scaleIdByKey.get('Control')!,
       scaleDelta: 2,
     },
-    // Vrstva 2 (§4.5): odpověď rovnou zapíná blok v šabloně, bez pravidla.
+    // Layer 2 (§4.5): the answer enables a template block directly, no rule.
     {
       runId: RUN_ID,
       answerOptionId: optionMarie.id,
@@ -496,9 +494,9 @@ async function main() {
     },
   ])
 
-  // --- Organizátorská párová otázka (§6.7) ---------------------------------
-  // Sňatek nedělají hráči, ale orgové mezi kapitolami. Do dotazníku pro hráče
-  // se netiskne a zadává se **jen jednou** — druhá postava ji vidí provázanou.
+  // --- Org paired question (§6.7) ------------------------------------------
+  // Marriages are entered by the orgs between chapters, never printed for
+  // players, and recorded once — the other character sees it linked.
   const [marriageQuestion] = await unscopedDb
     .insert(questions)
     .values({
@@ -541,7 +539,7 @@ async function main() {
   const optionMirekSvatba = marriageOptions.find((o) => o.externalId === 'A_Marie_1_2_Mirek')
   if (!optionMirekSvatba) throw new Error('Nepodařilo se založit volby sňatku.')
 
-  // --- Vrstva 3 (§4.5): pravidla se strukturovanými podmínkami -------------
+  // --- Layer 3 (§4.5): rules with structured conditions --------------------
   const [leaderRule] = await unscopedDb
     .insert(rules)
     .values({
@@ -570,8 +568,8 @@ async function main() {
     answerOptionId: optionMarie.id,
   })
 
-  // Cíl efektu odvozený z odpovědi (§7.3): vedoucím se stává ta postava,
-  // na kterou odkazuje vybraná volba — ne ta, která odpovídala.
+  // Target derived from the answer (§7.3): the leader is whoever the chosen
+  // option references, not whoever answered.
   await unscopedDb.insert(effects).values({
     runId: RUN_ID,
     ruleId: leaderRule.id,
@@ -593,7 +591,7 @@ async function main() {
         'Když org zadá, že se Marie provdala, sloučí se její domácnost s domácností vybraného partnera.',
       priority: 200,
       weight: '1',
-      // Svatba postihne domácnost jako celek, ne každého člena zvlášť (§4.4).
+      // A wedding hits the household as a whole, not each member (§4.4).
       appliesOncePerHousehold: true,
       sourceConfigVersionId: configVersionId,
     })
@@ -619,8 +617,7 @@ async function main() {
       ordinal: 1,
       kind: 'domacnost_slouceni',
       characterId: marie.id,
-      // Partnera bere z odpovědi, takže pravidlo nemusí existovat pro každou
-      // kombinaci 23 postav.
+      // The partner comes from the answer, so no rule per pair of 23 characters.
       relatedFromAnswer: true,
     },
     {

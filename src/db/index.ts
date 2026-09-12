@@ -1,10 +1,9 @@
 /**
- * Veřejné rozhraní datové vrstvy.
+ * Public surface of the data layer.
  *
- * `unscopedDb` tady **záměrně není**: aplikační kód se k datům dostává jen
- * přes `forRun(runId)` (architektonické pravidlo 2). Skripty, které pracují
- * napříč běhy (migrace, seed, záloha), si `unscopedDb` naimportují přímo
- * z `./client` — a je to v diffu vidět.
+ * `unscopedDb` is deliberately absent: application code reaches data only
+ * through `forRun(runId)` (architecture rule 2). Cross-run scripts (migration,
+ * seed, backup) import it straight from `./client`, which shows up in the diff.
  */
 export * as schema from './schema'
 export { forRun, parseRunId, RunScope, type RunId, type RunScopedTable } from './run-scope'

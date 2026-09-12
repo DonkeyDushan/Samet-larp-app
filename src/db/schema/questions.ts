@@ -17,16 +17,14 @@ import { scales } from './scales'
 import { chapters, configVersions, runs } from './runs'
 
 /**
- * Otázka (§6.1, §6.6). **Otázky jsou vlastní pro každou postavu** — žádná
- * sdílená sada. 23 postav × ~3 otázky × 3 kapitoly ≈ 207 otázek na hru,
- * proto je `character_id` povinné.
+ * Question (§6.1, §6.6). Questions are per character — there is no shared set,
+ * hence the mandatory `character_id`.
  *
- * Dotazník je plochý: podmíněné podotázky se vědomě neimplementují.
+ * The questionnaire is flat: conditional sub-questions are deliberately out.
  *
- * `source` odděluje otázky pro hráče od organizátorských (§6.7). Je to jen
- * jiný zdroj vstupu, ne jiný mechanismus — stejné typy, stejné dopady na
- * škály, stejná pravidla. V UI jsou v jednom proudu s ostatními otázkami
- * postavy, jen se značkou „zadává org", a počítají se do téhož ukazatele postupu.
+ * `source` separates player questions from org ones (§6.7) — a different input
+ * source, not a different mechanism: same types, same scale impacts, same
+ * rules, one stream in the UI and one progress indicator.
  */
 export const questions = pgTable(
   'questions',
@@ -35,29 +33,28 @@ export const questions = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** ID ze zdrojové tabulky: `Q_<Postava><Kapitola>_<Poradi>`, např. `Q_Marie1_1`. */
+    /** Source ID `Q_<Postava><Kapitola>_<Poradi>`, e.g. `Q_Marie1_1`. */
     externalId: text('external_id').notNull(),
     chapterId: uuid('chapter_id').notNull(),
     characterId: uuid('character_id').notNull(),
     ordinal: integer('ordinal').notNull(),
     type: questionType('type').notNull(),
-    /** Kdo otázku vyplňuje (§6.7). `org` se netiskne do dotazníku pro hráče. */
+    /** Who fills it in (§6.7); `org` is not printed for players. */
     source: questionSource('source').notNull().default('hrac'),
     /**
-     * Párová otázka (§6.7) — typicky sňatek. Týká se dvou postav, ale
-     * **zadává se jen jednou.** Odpověď odkazuje na ID jiné postavy a aplikace
-     * ji zobrazí provázaně i u té druhé postavy.
+     * Paired question (§6.7), typically marriage: it concerns two characters
+     * but is entered once. The answer references the other character's ID and
+     * the app shows it on both.
      *
-     * V datech je proto **jedna odpověď**, ne dvě zrcadlené — `answers`
-     * drží řádek u té postavy, u které byla zadaná. Tím odpadá celá třída
-     * konfliktů: nesoulad nemůže vzniknout, když je odpověď jen jedna.
+     * So there is one answer row, not two mirrored ones. That removes a whole
+     * class of conflicts — a mismatch cannot arise from a single answer.
      */
     isPaired: boolean('is_paired').notNull().default(false),
     text: text('text').notNull(),
     helpText: text('help_text'),
-    /** Cílová škála u typu `scale_direct`. */
+    /** Target scale for `scale_direct`. */
     scaleId: uuid('scale_id'),
-    /** Povoluje volbu `_OTHER_` — volný text, který org doplní ručně (§4.2). */
+    /** Allows `_OTHER_`: free text the org fills in by hand (§4.2). */
     allowOther: boolean('allow_other').notNull().default(false),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
@@ -71,13 +68,13 @@ export const questions = pgTable(
       t.characterId,
       t.ordinal,
     ),
-    // scale_direct musí mít škálu, ostatní typy ji mít nesmí.
+    // scale_direct must have a scale; no other type may.
     check(
       'questions_scale_direct_needs_scale',
       sql`(${t.type} = 'scale_direct') = (${t.scaleId} is not null)`,
     ),
-    // Párová otázka musí umět odkázat na druhou postavu, což jde jen přes
-    // volby odpovědí s `referenced_character_id`.
+    // A paired question must be able to reference the other character, which is
+    // only possible through options carrying `referenced_character_id`.
     check(
       'questions_paired_needs_options',
       sql`not ${t.isPaired} or ${t.type} in ('single', 'multi')`,
@@ -106,13 +103,13 @@ export const questions = pgTable(
 )
 
 /**
- * Volba odpovědi u otázky typu `single` / `multi` (§4.2).
+ * An answer option of a `single` / `multi` question (§4.2).
  *
- * Volby často odkazují na jiné postavy („Karel", „Mirek"). Odkaz musí jít na
- * **ID postavy z registru**, ne na volný text — jinak se po sňatku nebo
- * přejmenování rozpadne provázání (§6.6). Proto `referencedCharacterId`.
+ * Options often name other characters, and the reference must be a registry ID
+ * rather than free text — otherwise a marriage or rename breaks the link
+ * (§6.6). Hence `referencedCharacterId`.
  *
- * Dopady na škály nejsou v textovém sloupci, ale v tabulce `effects`.
+ * Scale impacts live in the `effects` table, not in a text column.
  */
 export const answerOptions = pgTable(
   'answer_options',
@@ -121,14 +118,14 @@ export const answerOptions = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** `A_<Postava>_<Kapitola>_<Otazka>_<Hodnota>`, např. `A_Marie_1_1_Karel`. */
+    /** `A_<Postava>_<Kapitola>_<Otazka>_<Hodnota>`, e.g. `A_Marie_1_1_Karel`. */
     externalId: text('external_id').notNull(),
     questionId: uuid('question_id').notNull(),
     ordinal: integer('ordinal').notNull(),
     label: text('label').notNull(),
-    /** Odkaz na postavu, když volba jmenuje jinou postavu. */
+    /** Set when the option names another character. */
     referencedCharacterId: uuid('referenced_character_id'),
-    /** Volba `_OTHER_`: org k ní doplní volný text (§4.2). */
+    /** The `_OTHER_` option: the org adds free text to it (§4.2). */
     isOther: boolean('is_other').notNull().default(false),
     createdAt: createdAt(),
   },
@@ -150,16 +147,15 @@ export const answerOptions = pgTable(
 )
 
 /**
- * Odpověď postavy na otázku v kapitole (§6.3).
+ * A character's answer in a chapter (§6.3).
  *
- * **Výchozí odpovědi neexistují.** Řádek tady znamená, že odpověď někdo
- * explicitně zadal. Chybějící řádek = chybějící odpověď a přepočet nelze
- * spustit. Žádné tiché doplňování hodnot na pozadí. Nikdy.
+ * There are no default answers: a row means someone entered it explicitly, and
+ * a missing row blocks the computation. Nothing is ever filled in silently.
  *
- * Hodnota se drží podle typu otázky: `boolValue`, `numericValue`, `textValue`,
- * u `single` / `multi` řádky v `answer_selected_options`.
+ * The value is held per question type in `boolValue`, `numericValue` or
+ * `textValue`; `single` / `multi` use `answer_selected_options`.
  *
- * Odpověď se edituje na místě (autosave, §6.4); historii změn drží `audit_log`.
+ * Answers are edited in place (autosave, §6.4); `audit_log` holds the history.
  */
 export const answers = pgTable(
   'answers',
@@ -174,13 +170,10 @@ export const answers = pgTable(
 
     boolValue: boolean('bool_value'),
     numericValue: integer('numeric_value'),
-    /** Volný text u typu `text` nebo doplnění k volbě `_OTHER_`. */
+    /** Free text for type `text`, or the text added to `_OTHER_`. */
     textValue: text('text_value'),
 
-    /**
-     * Odpověď doplnil org, ne hráč (§6.3). Aby šlo po hře poznat,
-     * co přišlo od hráče a co vyklikal game master.
-     */
+    /** Entered by the org, not the player (§6.3) — so it can be told apart later. */
     filledByOrg: boolean('filled_by_org').notNull().default(false),
     answeredBy: authorName('answered_by'),
     answeredAt: timestamp('answered_at', { withTimezone: true, mode: 'date' })
@@ -210,7 +203,7 @@ export const answers = pgTable(
   ],
 )
 
-/** Vybrané volby u otázek `single` (jeden řádek) a `multi` (víc řádků). */
+/** Selected options: one row for `single`, several for `multi`. */
 export const answerSelectedOptions = pgTable(
   'answer_selected_options',
   {

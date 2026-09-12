@@ -17,19 +17,19 @@ import { characters, groups } from './characters'
 import { chapters, runs } from './runs'
 
 /**
- * Šablona dokumentu jako Markdown stažený z Google Docu (§8.3, §10.3).
+ * A document template: Markdown exported from a Google Doc (§8.3, §10.3).
  *
- * Model naplnění je **mazání, ne vkládání**: šablona obsahuje všechny varianty
- * odstavců zároveň a aplikace maže ty, které engine nevybral. Značky jsou párové
- * `{BLOK <ID>}` … `{/BLOK}` plus proměnné `{JMENO}`, `{PRIJMENI}`, `{VEK}`,
- * `{SKUPINA}`. Vnořené bloky se nepodporují a **žádná značka nesmí přežít**
- * do výsledného dokumentu (§8.4).
+ * Filling works by deletion, not insertion: the template holds every paragraph
+ * variant at once and the app removes the ones the engine did not select.
+ * Markers are the paired `{BLOK <ID>}` … `{/BLOK}` plus variables `{JMENO}`,
+ * `{PRIJMENI}`, `{VEK}`, `{SKUPINA}`. Nested blocks are unsupported and no
+ * marker may survive into the finished document (§8.4).
  *
- * Nahrání stejné šablony znovu = nová verze, stará zůstává. Aktivní verze je
- * právě jedna na (kapitola, typ, postava/skupina).
+ * Re-uploading the same template makes a new version; the old one stays.
+ * Exactly one version is active per (chapter, kind, character/group).
  *
- * `parsedBlocks` je výsledek rozparsování značek při nahrání — slouží
- * validacím §11 (blok bez cesty, blok očekávaný enginem a chybějící v šabloně).
+ * `parsedBlocks` is the parse result from upload, feeding the §11 validations
+ * (a block nothing can reach, a block the engine expects but the template lacks).
  */
 export const templates = pgTable(
   'templates',
@@ -40,17 +40,17 @@ export const templates = pgTable(
       .references(() => runs.id, { onDelete: 'restrict' }),
     chapterId: uuid('chapter_id').notNull(),
     kind: templateKind('kind').notNull(),
-    /** Vyplněné u `kind = 'postava'`. */
+    /** Set when `kind = 'postava'`. */
     characterId: uuid('character_id'),
-    /** Vyplněné u `kind = 'skupina'`. */
+    /** Set when `kind = 'skupina'`. */
     groupId: uuid('group_id'),
-    /** ID šablony z listu `Characters`, když se přiřazuje podle něj. */
+    /** Template ID from the `Characters` sheet, when assignment goes through it. */
     externalId: text('external_id'),
     name: text('name').notNull(),
     sourceFilename: text('source_filename').notNull(),
-    /** Surový Markdown se všemi variantami odstavců. */
+    /** Raw Markdown with every paragraph variant. */
     markdown: text('markdown').notNull(),
-    /** Seznam nalezených `{BLOK ID}` a `{PROMENNA}` + případné chyby párování. */
+    /** Found `{BLOK ID}` and `{PROMENNA}` markers plus any pairing errors. */
     parsedBlocks: jsonb('parsed_blocks'),
     version: integer('version').notNull().default(1),
     isActive: boolean('is_active').notNull().default(true),

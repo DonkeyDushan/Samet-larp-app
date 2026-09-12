@@ -265,7 +265,9 @@ režimu.
 - Hodnoty doménových stavů jsou **česky bez diakritiky** (`rozpracovana`,
   `spocitana`, `vydana`, `prepocet`, `rucni_uprava`) — aby se v SQL literálech
   nemíchala diakritika.
-- Komentáře a dokumentace česky. Komentář vysvětluje **proč**, ne co kód dělá.
+- Dokumentace (`.md`) česky. **Komentáře v kódu anglicky** — viz globální
+  `~/.claude/CLAUDE.md`: co nejstručněji, jen k nezjevným věcem, a vysvětlují
+  **proč**, ne co kód dělá.
 
 ## Konvence ID ze zdrojové tabulky
 

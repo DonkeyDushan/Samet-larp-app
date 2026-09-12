@@ -10,9 +10,8 @@ import { createdAt } from './_shared'
 import { configVersions, runs } from './runs'
 
 /**
- * Skupina / organizace / parta (§4.1). 7 na běh.
- * Členy a vedení **nedrží tahle tabulka** — mění se po kapitolách,
- * a proto žijí v `group_memberships` jako snapshot na kapitolu.
+ * Group / organisation / gang (§4.1). Members and leadership are not here:
+ * they change per chapter and live in `group_memberships` as a snapshot.
  */
 export const groups = pgTable(
   'groups',
@@ -21,7 +20,7 @@ export const groups = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** ID ze zdrojové tabulky, např. `G_SrdceParty`. */
+    /** ID from the source spreadsheet, e.g. `G_SrdceParty`. */
     externalId: text('external_id').notNull(),
     name: text('name').notNull(),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
@@ -39,12 +38,12 @@ export const groups = pgTable(
 )
 
 /**
- * Postava v běhu (§4.2). Minimální registr — **nic navíc se o postavě
- * nemodeluje**: charakterizace žije v pevném textu šablony, ne v datech.
+ * A character in a run (§4.2). A minimal registry: nothing beyond scales, flags
+ * and membership is modelled — characterisation lives in fixed template text.
  *
- * `firstName` / `lastName` jsou **výchozí** hodnoty z konfigurace. Sňatek mění
- * příjmení, proto se do textů nikdy nepíše jméno natvrdo (§8.8) a aktuální
- * hodnota se bere z `character_variables` pro danou kapitolu.
+ * `firstName` / `lastName` are the config defaults. Marriage changes the
+ * surname, so texts never hardcode a name (§8.8) and the current value comes
+ * from `character_variables` for the given chapter.
  */
 export const characters = pgTable(
   'characters',
@@ -53,15 +52,15 @@ export const characters = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** ID z listu `Characters`, např. `Marie`. Vstupuje do konvence ID otázek. */
+    /** ID from the `Characters` sheet, e.g. `Marie`; feeds the question ID convention. */
     externalId: text('external_id').notNull(),
     firstName: text('first_name').notNull(),
     lastName: text('last_name').notNull(),
-    /** Ročník, ze kterého se počítá `{VEK}` v každé kapitole. */
+    /** Birth year, used to compute `{VEK}` in each chapter. */
     birthYear: integer('birth_year'),
-    /** Výchozí skupina z konfigurace. Aktuální členství je v `group_memberships`. */
+    /** Default group from config; current membership is in `group_memberships`. */
     homeGroupId: uuid('home_group_id'),
-    /** ID šablony dokumentu z listu `Characters` (§4.2). */
+    /** Document template ID from the `Characters` sheet (§4.2). */
     templateExternalId: text('template_external_id'),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),

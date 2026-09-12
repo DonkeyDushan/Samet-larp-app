@@ -17,21 +17,20 @@ import { computationKind, computationStatus } from './enums'
 import { chapters, configVersions, runs } from './runs'
 
 /**
- * Verze přepočtu (§5, kroky 4–6).
+ * One version of a computation (§5, steps 4–6).
  *
- * Přepočet jde spustit **opakovaně a nedestruktivně** — každé spuštění je nový
- * řádek, nikdy update. `kind = 'rucni_uprava'` je verze vzniklá editací JSON
- * mezivýstupu; `parentComputationId` ukazuje, ze čeho vyšla. Org si tak může
- * pustit přepočet stokrát, než ho potvrdí.
+ * Recomputing is repeatable and non-destructive — every run is a new row, never
+ * an update, so a dry-run can be fired a hundred times before confirmation.
+ * `kind = 'rucni_uprava'` is a version produced by editing the intermediate
+ * JSON; `parentComputationId` points at what it started from.
  *
- * `resultJson` je kompletní stav v tom tvaru, ve kterém ho vrátil engine
- * (a ve kterém ho org edituje). Relační tabulky stavu v `state.ts` jsou z něj
- * odvozená **dotazovatelná projekce** pro přehledy; `resultJson` je nedotknutelný
- * archiv a základ pro `beh.json` (§10.4).
+ * `resultJson` is the complete state exactly as the engine returned it (and as
+ * the org edits it). The relational state tables in `state.ts` are a queryable
+ * projection of it for overviews; `resultJson` is the untouchable archive and
+ * the basis of `beh.json` (§10.4).
  *
- * `isReleased` říká, ze které verze se tisklo. Vydaná je nejvýš jedna verze na
- * kapitolu (vynuceno částečným unikátním indexem) a během hry je zdrojem pravdy
- * papír v rukou hráče, ne databáze (§3.2).
+ * `isReleased` marks the version that was printed from — at most one per
+ * chapter, enforced by a partial unique index (§3.2).
  */
 export const computations = pgTable(
   'computations',
@@ -41,30 +40,29 @@ export const computations = pgTable(
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
     chapterId: uuid('chapter_id').notNull(),
-    /** Pořadí verze v rámci kapitoly, od 1. */
     version: integer('version').notNull(),
     kind: computationKind('kind').notNull().default('prepocet'),
     status: computationStatus('status').notNull().default('navrh'),
     parentComputationId: uuid('parent_computation_id'),
 
-    /** Konfigurace, se kterou se počítalo — pro dohledání po hře. */
+    /** The config used, so it can be traced back after the game. */
     configVersionId: uuid('config_version_id').notNull(),
-    /** Verze kódu enginu, aby šlo poznat, čím se to počítalo. */
+    /** Engine code version, to tell what produced this. */
     engineVersion: text('engine_version').notNull(),
     /**
-     * Hash vstupů (stav + odpovědi + pravidla + hody). Stejný vstup = stejný
-     * výstup (§2, bod 3); rozdílný hash u „stejného" přepočtu je poplach.
+     * Hash of the inputs (state + answers + rules + dice). Same input, same
+     * output (§2); a differing hash on a supposedly identical run is an alarm.
      */
     inputHash: text('input_hash').notNull(),
 
-    /** Kompletní nový stav, jak ho vrátil engine (nebo jak ho org přepsal). */
+    /** The complete new state as the engine returned it, or as the org edited it. */
     resultJson: jsonb('result_json').notNull(),
-    /** `trace[]` — podklad pro vysvětlení „proč" v UI (§7.5). */
+    /** `trace[]`, the basis for explaining "why" in the UI (§7.5). */
     traceJson: jsonb('trace_json').notNull(),
-    /** Nevyřešené konflikty stejných priorit (§7.3). Blokují potvrzení. */
+    /** Unresolved equal-priority conflicts (§7.3); they block confirmation. */
     conflictsJson: jsonb('conflicts_json'),
 
-    /** Důvod přepočtu / editace. U vydané kapitoly povinný (§3.2). */
+    /** Reason for the run or edit; mandatory on a released chapter (§3.2). */
     reason: text('reason'),
 
     isReleased: boolean('is_released').notNull().default(false),

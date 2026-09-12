@@ -15,21 +15,18 @@ import { authorName, createdAt } from './_shared'
 import { cascadeDecision, chapterStatus, runStatus } from './enums'
 
 /**
- * Běh hry — nejvyšší úroveň izolace dat (§3.2, §3.3).
- * Záměrně **ne** „session": to slovo je v kódu obsazené přihlašovací relací.
+ * A run of the game — the top level of data isolation (§3.2, §3.3).
+ * Deliberately not "session": that word is taken by the login session.
  *
- * `id` je čitelný identifikátor `2026-09-12_A` a používá se i v názvech
- * exportovaných souborů (§10.4).
+ * `id` is the readable `2026-09-12_A` and is reused in export filenames (§10.4).
  */
 export const runs = pgTable(
   'runs',
   {
     id: text('id').primaryKey(),
-    /** Datum zahájení, ze kterého se odvozuje `id`. */
     startDate: text('start_date').notNull(),
-    /** Písmeno běhu (`A`, `B`) — určuje i barvu rozhraní (§3.3, bod 2). */
+    /** Run letter (`A`, `B`); also drives the UI colour (§3.3). */
     letter: text('letter').notNull(),
-    /** Volitelný popisný název („Podzimní běh, sobotní parta"). */
     label: text('label'),
     status: runStatus('status').notNull().default('zalozen'),
     archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
@@ -43,12 +40,12 @@ export const runs = pgTable(
 )
 
 /**
- * Verze importované konfigurace (§6.5, §10.2).
+ * A version of the imported config (§6.5, §10.2).
  *
- * Verze je **vázaná na běh**: dva souběžné běhy mohou mít různé verze otázek.
- * Opakovaný import do běhu vytvoří novou verzi s diffem proti předchozí;
- * stará verze se nikdy nepřepisuje. Aktivní verze je právě jedna
- * (vynuceno částečným unikátním indexem).
+ * Bound to a run: two concurrent runs may have different question versions.
+ * Re-importing creates a new version with a diff against the previous one; the
+ * old one is never overwritten. Exactly one version is active, enforced by a
+ * partial unique index.
  */
 export const configVersions = pgTable(
   'config_versions',
@@ -57,16 +54,15 @@ export const configVersions = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** Pořadí verze v rámci běhu, od 1. */
     version: integer('version').notNull(),
-    /** Aktivní verze, ze které běh počítá. Právě jedna na běh. */
+    /** The version the run computes from. Exactly one per run. */
     isActive: boolean('is_active').notNull().default(false),
     sourceFilename: text('source_filename').notNull(),
-    /** Hash nahraného souboru — pozná opakovaný import téhož obsahu. */
+    /** Detects a re-import of identical content. */
     sourceHash: text('source_hash').notNull(),
-    /** Diff proti předchozí verzi, pro obrazovku Správa. */
+    /** Diff against the previous version, for the admin screen. */
     diffFromPrevious: jsonb('diff_from_previous'),
-    /** Chyby a varování importu s odkazem na list a řádek (§10.2). */
+    /** Import errors and warnings, pointing at sheet and row (§10.2). */
     importReport: jsonb('import_report'),
     note: text('note'),
     createdAt: createdAt(),
@@ -83,12 +79,12 @@ export const configVersions = pgTable(
 )
 
 /**
- * Kapitola v rámci běhu (1–3). Řádky pro všechny tři kapitoly vznikají
- * při založení běhu, aby na ně mohla konfigurace navázat otázky.
+ * Chapter within a run (1–3). All three rows are created with the run so that
+ * config import has something to attach questions to.
  *
- * `isTouched` je kaskáda z §3.2: změna v už vydané kapitole označí následující
- * kapitoly jako dotčené a aplikace **sama nic nepřepočítá** — čeká na vědomé
- * rozhodnutí orga (`cascadeDecision`).
+ * `isTouched` is the cascade from §3.2: a change in an already released chapter
+ * marks the following ones as touched, and the app recomputes nothing on its
+ * own — it waits for the org's `cascadeDecision`.
  */
 export const chapters = pgTable(
   'chapters',
@@ -100,16 +96,13 @@ export const chapters = pgTable(
     number: integer('number').notNull(),
     status: chapterStatus('status').notNull().default('rozpracovana'),
 
-    /** Vydání: dokumenty jsou vytištěné a v rukou hráčů (§3.2). */
+    /** Released: documents are printed and in the players' hands (§3.2). */
     releasedAt: timestamp('released_at', { withTimezone: true, mode: 'date' }),
     releasedBy: text('released_by'),
-    /**
-     * Která verze přepočtu byla vydána, se nedrží tady, ale příznakem
-     * `computations.is_released` — jinak by vznikl kruhový cizí klíč.
-     * Během hry je zdrojem pravdy papír v rukou hráče, ne databáze.
-     */
+    // Which computation was released lives in `computations.is_released`,
+    // not here — otherwise the foreign keys would be circular.
 
-    /** Kaskáda (§3.2). */
+    /** Cascade (§3.2). */
     isTouched: boolean('is_touched').notNull().default(false),
     touchedAt: timestamp('touched_at', { withTimezone: true, mode: 'date' }),
     touchedReason: text('touched_reason'),
@@ -117,8 +110,8 @@ export const chapters = pgTable(
     cascadeDecidedAt: timestamp('cascade_decided_at', { withTimezone: true, mode: 'date' }),
     cascadeDecidedBy: text('cascade_decided_by'),
     /**
-     * True, když org zvolil „ponechat jak je": vypočtený stav se rozchází
-     * s tím, co drží hráči v ruce. Aplikace to musí umět říct nahlas.
+     * Set when the org chose to keep the released state: the computed state
+     * differs from what the players hold. The app must say so out loud.
      */
     divergesFromReleased: boolean('diverges_from_released').notNull().default(false),
     divergenceNote: text('divergence_note'),

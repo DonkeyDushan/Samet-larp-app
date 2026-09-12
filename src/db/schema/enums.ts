@@ -1,15 +1,15 @@
 import { pgEnum } from 'drizzle-orm/pg-core'
 
-/** Životní cyklus běhu (§3.2). */
+/** Run lifecycle (§3.2). */
 export const runStatus = pgEnum('run_status', ['zalozen', 'aktivni', 'archivovan'])
 
-/** Stavy kapitoly (§3.2). Žádný z nich není nevratný zámek. */
+/** Chapter states (§3.2). None of them is an irreversible lock. */
 export const chapterStatus = pgEnum('chapter_status', ['rozpracovana', 'spocitana', 'vydana'])
 
-/** Rozhodnutí orga o dotčené kapitole (kaskáda, §3.2). */
+/** Org's decision about a touched chapter (cascade, §3.2). */
 export const cascadeDecision = pgEnum('cascade_decision', ['prepocitat', 'ponechat'])
 
-/** Typy otázek (§6.1). Podmíněné podotázky se vědomě neimplementují. */
+/** Question types (§6.1). Conditional sub-questions are deliberately out. */
 export const questionType = pgEnum('question_type', [
   'bool',
   'single',
@@ -18,7 +18,7 @@ export const questionType = pgEnum('question_type', [
   'text',
 ])
 
-/** Nad čím podmínka pravidla mluví (§7.1, strukturovaně — žádný parser textu). */
+/** What a rule condition talks about (§7.1) — structured, never parsed from text. */
 export const conditionSubject = pgEnum('condition_subject', [
   'odpoved',
   'skala',
@@ -29,7 +29,7 @@ export const conditionSubject = pgEnum('condition_subject', [
   'hod',
 ])
 
-/** Operátor podmínky. */
+/** Condition operator. */
 export const conditionOperator = pgEnum('condition_operator', [
   'eq',
   'neq',
@@ -44,10 +44,10 @@ export const conditionOperator = pgEnum('condition_operator', [
   'je_nepravda',
 ])
 
-/** Spojka podmínky se předchozí podmínkou ve stejné skupině. */
+/** Joins a condition to the previous one in the same group. */
 export const conditionConnector = pgEnum('condition_connector', ['AND', 'OR'])
 
-/** Druh efektu (§7.1, §4.4). */
+/** Effect kind (§7.1, §4.4). */
 export const effectKind = pgEnum('effect_kind', [
   'zmena_skaly',
   'nastaveni_skaly',
@@ -62,18 +62,18 @@ export const effectKind = pgEnum('effect_kind', [
 ])
 
 /**
- * Rozsah platnosti škály (§4.4). `postava` = hodnota patří jedné postavě
- * (`Regime`, `Control`). `domacnost` = hodnota patří domácnosti a všichni
- * členové čtou a mění tutéž (`Wealth`, `Bony`, firemní byt, auto).
+ * Scale ownership (§4.4). `postava`: the value belongs to one character
+ * (`Regime`, `Control`). `domacnost`: it belongs to the household and every
+ * member reads and changes the same one (`Wealth`, `Bony`, company flat, car).
  */
 export const scaleScope = pgEnum('scale_scope', ['postava', 'domacnost'])
 
 /**
- * Jak se hodnoty slévají při sňatku (§4.4). Výchozí je součet s ořezem na 10.
+ * Merge on marriage (§4.4); the default is a sum clamped at 10.
  *
- * `otazka` znamená **nedopočítávat vůbec** — hodnota přijde z odpovědi nebo
- * rozhodnutí orga. Tak se to dělá u peněz: kolik kdo do společného vložil,
- * si hráči rozehrávají sami a „součet a ořízni" by jim to vzalo.
+ * `otazka` means compute nothing — the value comes from an answer or from the
+ * org. That is how money works: players decide themselves how much each
+ * partner contributed, and a silent sum would take that away from them.
  */
 export const mergeStrategy = pgEnum('merge_strategy', [
   'soucet',
@@ -83,35 +83,35 @@ export const mergeStrategy = pgEnum('merge_strategy', [
 ])
 
 /**
- * Jak se hodnota dělí při rozvodu nebo úmrtí (§4.4).
- * Výchozí `kopie` = každý si odnáší aktuální hodnotu domácnosti.
- * `otazka` = nedopočítávat, rozhodne odpověď nebo org. Žádné tiché dopočítání.
+ * Split on divorce or death (§4.4). Default `kopie`: each takes the current
+ * household value. `otazka`: an answer or the org decides — never a silent
+ * computation.
  */
 export const splitStrategy = pgEnum('split_strategy', ['kopie', 'polovina', 'otazka'])
 
 /**
- * Kdo otázku vyplňuje (§6.7). `org` se **netiskne do dotazníku pro hráče**;
- * jinak se chová úplně stejně jako hráčská otázka — je to jen jiný zdroj
- * vstupu, ne jiný mechanismus, a engine mezi nimi nerozlišuje.
+ * Who fills the question in (§6.7). `org` is not printed into the player's
+ * questionnaire; otherwise it behaves identically — a different input source,
+ * not a different mechanism, and the engine does not tell them apart.
  */
 export const questionSource = pgEnum('question_source', ['hrac', 'org'])
 
-/** Akce nad členstvím ve skupině. */
+/** Group membership action. */
 export const membershipAction = pgEnum('membership_action', ['pridat', 'odebrat'])
 
-/** Role ve skupině. */
+/** Role in a group. */
 export const groupRole = pgEnum('group_role', ['clen', 'vedouci'])
 
-/** Odkud se vzala hodnota stavu postavy. */
+/** Where a character state value came from. */
 export const stateSource = pgEnum('state_source', ['pocatecni', 'prepocet', 'rucni'])
 
-/** Verze přepočtu vzniká buď enginem, nebo ruční úpravou mezivýstupu (§5, krok 6). */
+/** A computation version comes from the engine or from a manual edit (§5.6). */
 export const computationKind = pgEnum('computation_kind', ['prepocet', 'rucni_uprava'])
 
-/** Návrh = dry-run (§5, krok 4). Potvrzená verze je ta, ze které se generují dokumenty. */
+/** `navrh` is a dry-run (§5.4); documents are generated from a confirmed one. */
 export const computationStatus = pgEnum('computation_status', ['navrh', 'potvrzena'])
 
-/** Typ šablony dokumentu (§8.6). */
+/** Document template kind (§8.6). */
 export const templateKind = pgEnum('template_kind', [
   'postava',
   'skupina',

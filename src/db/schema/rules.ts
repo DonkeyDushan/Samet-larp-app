@@ -25,16 +25,16 @@ import { answerOptions, questions } from './questions'
 import { chapters, configVersions, runs } from './runs'
 
 /**
- * Pravidlo: `PODMÍNKA → EFEKT [priorita, váha]` (§7.1).
+ * A rule: `CONDITION → EFFECT [priority, weight]` (§7.1).
  *
- * `isExclusion` je negace / vyloučení: „pokud nastalo E a zároveň F, pak D
- * nikdy nenastane". **Vyloučení má vždy přednost před přiřazením** a aplikuje
- * se v kroku 2 fixního pořadí vyhodnocení (§7.3).
+ * `isExclusion` marks a rule that prevents an outcome ("if E and F, then D
+ * never happens"). Exclusions always win over assignment and run in step 2 of
+ * the fixed evaluation order (§7.3).
  *
- * Při dvou protichůdných výsledcích vyhrává vyšší `priority`. Při **stejné**
- * prioritě engine nerozhoduje sám — vyhodí konflikt do UI.
+ * On contradicting results the higher `priority` wins; on equal priority the
+ * engine does not decide and raises a conflict into the UI.
  *
- * `chapterId = NULL` znamená pravidlo platné ve všech kapitolách běhu.
+ * `chapterId = NULL` means the rule applies in every chapter of the run.
  */
 export const rules = pgTable(
   'rules',
@@ -45,27 +45,23 @@ export const rules = pgTable(
       .references(() => runs.id, { onDelete: 'restrict' }),
     externalId: text('external_id').notNull(),
     chapterId: uuid('chapter_id'),
-    /** Krátký název pro UI a pro trace („proč"). */
+    /** Short name for the UI and for the trace. */
     name: text('name').notNull(),
-    /** Volitelné vysvětlení pro orga, aby pravidlo šlo přečíst česky (§7.5). */
+    /** Optional plain-language explanation for the org (§7.5). */
     description: text('description'),
     priority: integer('priority').notNull().default(0),
-    /** Váha příspěvku pravidla (§7.2). Editovatelná v tabulce, ne v kódu. */
+    /** Weight of the rule's contribution (§7.2). Edited in the spreadsheet, not in code. */
     weight: numeric('weight', { precision: 8, scale: 3 }).notNull().default('1'),
     isExclusion: boolean('is_exclusion').notNull().default(false),
     isEnabled: boolean('is_enabled').notNull().default(true),
     /**
-     * „Aplikovat jednou za domácnost" (§4.4). U sdílených škál se efekty
-     * jednotlivých členů normálně **sčítají** — oba do společného účtu
-     * vydělávají. Události, které postihnou domácnost jako celek (vykradli
-     * vás, dostali jste byt), by se ale započítaly tolikrát, kolik má
-     * domácnost členů. Tenhle příznak to zastaví.
+     * Apply once per household (§4.4). Member effects on a shared scale normally
+     * add up — both partners earn into the joint account. An event hitting the
+     * household as a whole (burgled, granted a flat) would otherwise count once
+     * per member; this flag stops that.
      */
     appliesOncePerHousehold: boolean('applies_once_per_household').notNull().default(false),
-    /**
-     * Pravidlo si vyžádá hod kostkou o tolika stěnách (§7.4).
-     * NULL = pravidlo náhodu nepoužívá.
-     */
+    /** Dice sides the rule requires (§7.4); NULL means no randomness. */
     diceSides: integer('dice_sides'),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
@@ -88,21 +84,20 @@ export const rules = pgTable(
 )
 
 /**
- * Dílčí podmínka pravidla — **strukturovaně, ne jako text** (§15).
- * Sloupce odpovídají zadání: `subjekt | operátor | hodnota | spojka | skupina`.
- * Vlastní jazyk na výrazy se nepíše nikdy.
+ * One condition of a rule — structured, never text (§15). The columns mirror
+ * the spec: subject | operator | value | connector | group.
  *
- * Vyhodnocení: řádky se stejným `groupIndex` se spojují svým `connector`
- * (spojka vůči **předchozímu** řádku ve skupině, u prvního řádku se ignoruje),
- * zleva doprava. Skupiny mezi sebou se spojují vždy `OR`.
- * Tedy `(A AND B) OR (C)` = skupina 0: A, B(AND); skupina 1: C.
+ * Rows sharing a `groupIndex` combine left to right through their `connector`
+ * (which joins a row to the previous one and is ignored on the first); groups
+ * are always joined by `OR`. So `(A AND B) OR C` is group 0: A, B(AND);
+ * group 1: C.
  *
- * `negate` pokrývá `NOT A` bez nutnosti zavádět operátor pro každou negaci.
+ * `negate` covers `NOT A` without a negated variant of every operator.
  *
- * Subjekt určuje, který odkaz je vyplněný:
- * `odpoved` → questionId (+ volitelně answerOptionId), `skala` → scaleId,
- * `pasmo` → scaleId + bandId, `priznak` → flagId,
- * `clenstvi` / `vedeni` → groupId, `hod` → nic (bere hod vlastního pravidla).
+ * The subject decides which reference is filled in: `odpoved` → questionId
+ * (optionally answerOptionId), `skala` → scaleId, `pasmo` → scaleId + bandId,
+ * `priznak` → flagId, `clenstvi` / `vedeni` → groupId, `hod` → none (it takes
+ * its own rule's roll).
  */
 export const ruleConditions = pgTable(
   'rule_conditions',
@@ -112,9 +107,8 @@ export const ruleConditions = pgTable(
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
     ruleId: uuid('rule_id').notNull(),
-    /** „Skupina" ze zdrojové tabulky. Skupiny se spojují OR. */
+    /** The `Skupina` column from the source sheet; groups combine with OR. */
     groupIndex: integer('group_index').notNull().default(0),
-    /** Pořadí ve skupině. */
     position: integer('position').notNull(),
     connector: conditionConnector('connector').notNull().default('AND'),
     negate: boolean('negate').notNull().default(false),
@@ -128,17 +122,13 @@ export const ruleConditions = pgTable(
     bandId: uuid('band_id'),
     flagId: uuid('flag_id'),
     groupId: uuid('group_id'),
-    /**
-     * Postava, o které podmínka mluví. NULL = postava, která se právě
-     * vyhodnocuje (běžný případ). Vyplněné = podmínka o konkrétní jiné postavě.
-     */
+    /** NULL means the character being evaluated; set for a specific other one. */
     characterId: uuid('character_id'),
 
-    /** Hodnota k porovnání. Textová i číselná, podle operátoru. */
     valueText: text('value_text'),
     valueNumber: integer('value_number'),
     valueBool: boolean('value_bool'),
-    /** Seznam hodnot pro `in` / `not_in`. */
+    /** Values for `in` / `not_in`. */
     valueList: text('value_list').array(),
 
     createdAt: createdAt(),
@@ -189,13 +179,13 @@ export const ruleConditions = pgTable(
 )
 
 /**
- * Efekt — co se stane (§7.1). Vlastníkem je **buď** pravidlo, **nebo** volba
- * odpovědi (sloupec dopadu na škály z §4.2, `S_Marie_Wealth+3`). Jedna tabulka
- * proto, že tvar efektu je v obou případech stejný a engine ho zpracovává
- * jedním kódem; CHECK vynutí právě jednoho vlastníka.
+ * What happens (§7.1). The owner is either a rule or an answer option (the
+ * scale-impact column from §4.2, `S_Marie_Wealth+3`). One table, because the
+ * shape is identical in both cases and the engine handles them with one code
+ * path; a CHECK enforces exactly one owner.
  *
- * `usesDiceValue` = velikost změny se bere z hozeného čísla (§7.4), které je
- * uložené v `dice_rolls` a při přepočtu se **neopakuje**.
+ * `usesDiceValue` takes the magnitude from the roll stored in `dice_rolls`,
+ * which is never re-rolled on recomputation (§7.4).
  */
 export const effects = pgTable(
   'effects',
@@ -210,10 +200,10 @@ export const effects = pgTable(
     ordinal: integer('ordinal').notNull().default(0),
 
     kind: effectKind('kind').notNull(),
-    /** Váha efektu (§7.2); výsledek = součet vážených příspěvků. */
+    /** Effect weight (§7.2); the result is a sum of weighted contributions. */
     weight: numeric('weight', { precision: 8, scale: 3 }).notNull().default('1'),
 
-    /** Cílová postava. NULL = postava, které se přepočet týká. */
+    /** NULL means the character being computed. */
     characterId: uuid('character_id'),
 
     /** `zmena_skaly` / `nastaveni_skaly` / `pasmo`. */
@@ -227,7 +217,7 @@ export const effects = pgTable(
     flagId: uuid('flag_id'),
     flagValue: boolean('flag_value'),
 
-    /** `blok`: ID bloku v šabloně, `{BLOK <ID>}` (§8.4). */
+    /** `blok`: template block ID, `{BLOK <ID>}` (§8.4). */
     blockExternalId: text('block_external_id'),
 
     /** `clenstvi` / `vedeni`. */
@@ -235,22 +225,19 @@ export const effects = pgTable(
     membershipAction: membershipAction('membership_action'),
     groupRole: groupRole('group_role'),
 
-    /** `tag`: strojově čitelný signál pro orga, „vytáhni dokument č. 42" (§8.7). */
+    /** `tag`: machine-readable signal for the org, "pull document 42" (§8.7). */
     tagCode: text('tag_code'),
     tagNote: text('tag_note'),
 
     /**
-     * **Druhá postava efektu — cíl odvozený z odpovědi (§7.3).**
+     * The effect's second character — a target derived from the answer (§7.3).
+     * Needed by `domacnost_slouceni` (the spouse), `vedeni` (who became leader)
+     * and `clenstvi` (who to add or remove).
      *
-     * Většina efektů se týká postavy, která odpověděla. Některé ne:
-     * - `domacnost_slouceni` potřebuje partnera (sňatek),
-     * - `vedeni` potřebuje vědět, kdo se stal vedoucím,
-     * - `clenstvi` koho přidat nebo odebrat.
-     *
-     * `relatedCharacterId` jmenuje postavu natvrdo, `relatedFromAnswer` vezme
-     * postavu, na kterou odkazuje vybraná volba odpovědi
-     * (`answer_options.referenced_character_id`). Druhá cesta je ta, kvůli
-     * které nemusí autor psát pravidlo pro každou kombinaci 23 postav.
+     * `relatedCharacterId` names the character outright; `relatedFromAnswer`
+     * takes whoever the chosen option references
+     * (`answer_options.referenced_character_id`). The second path is what saves
+     * the author from writing a rule per pair of 23 characters.
      */
     relatedCharacterId: uuid('related_character_id'),
     relatedFromAnswer: boolean('related_from_answer').notNull().default(false),
@@ -267,12 +254,12 @@ export const effects = pgTable(
       'effects_scale_value_range',
       sql`${t.scaleSetValue} is null or ${t.scaleSetValue} between 1 and 10`,
     ),
-    // Druhá postava se zadá buď jmenovitě, nebo z odpovědi — ne obojí.
+    // The second character is named or derived, never both.
     check(
       'effects_related_single_source',
       sql`not (${t.relatedCharacterId} is not null and ${t.relatedFromAnswer})`,
     ),
-    // Sloučení domácnosti se bez druhé postavy neobejde.
+    // A household merge cannot work without the second character.
     check(
       'effects_merge_needs_related',
       sql`${t.kind} <> 'domacnost_slouceni' or ${t.relatedCharacterId} is not null or ${t.relatedFromAnswer}`,

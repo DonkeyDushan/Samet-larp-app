@@ -1,9 +1,9 @@
 /**
- * Test architektonického pravidla, ne funkce.
+ * Tests an architecture rule, not a function.
  *
- * Pravidlo 2 říká, že `run_id` je v každé tabulce. Tenhle test to kontroluje
- * mechanicky nad celým schématem, takže nová tabulka bez `run_id` spadne
- * v testech a ne až na hře, kdy se data dvou běhů potkají.
+ * Rule 2 requires `run_id` in every table. Checking it mechanically over the
+ * whole schema means a new table without it fails here, not during the game
+ * when two runs' data meet.
  */
 import { readFileSync } from 'node:fs'
 import { getTableColumns, getTableName, is } from 'drizzle-orm'
@@ -11,11 +11,11 @@ import { PgTable } from 'drizzle-orm/pg-core'
 import { describe, expect, it } from 'vitest'
 import * as schema from './schema'
 
-/** `runs` je sama tou tabulkou, na kterou `run_id` odkazuje. */
+/** `runs` is the table `run_id` points at. */
 const WITHOUT_RUN_ID = new Set(['runs'])
 
-// `schema` exportuje tabulky i enumy; `unknown[]` proto, aby predikát `is`
-// nemusel být přiřaditelný do jejich sjednoceného typu.
+// `schema` exports enums as well as tables; `unknown[]` keeps the `is`
+// predicate out of their union type.
 const tables = (Object.values(schema) as unknown[])
   .filter((value): value is PgTable => is(value, PgTable))
   .map((table) => ({ name: getTableName(table), columns: getTableColumns(table) }))

@@ -14,17 +14,15 @@ import { characters } from './characters'
 import { configVersions, runs } from './runs'
 
 /**
- * Definice škály (§4.1). Např. `Wealth`, `Regime`, `Control`, `Bony`.
+ * Scale definition (§4.1), e.g. `Wealth`, `Regime`, `Control`, `Bony`.
  *
- * Rozsah je celá čísla 1–10; `minValue` / `maxValue` jsou v datech, aby se
- * hranice nemusela hledat v kódu. Hodnoty mimo rozsah se **ořezávají**
- * (clamp), ne obtáčejí, a každý ořez se zapíše do auditu — je to signál
- * špatně nakalibrovaných vah.
+ * Values are integers 1–10. `minValue` / `maxValue` live in data so the engine
+ * never reads bounds from code. Out-of-range values are clamped, not wrapped,
+ * and every clamp is audited — it signals badly calibrated weights.
  *
- * `scope` rozhoduje, **komu hodnota patří** (§4.4): škála s rozsahem `postava`
- * má hodnoty v `character_scale_values`, škála s rozsahem `domacnost`
- * v `household_scale_values`. Sdílená hodnota se nikdy nekopíruje mezi
- * postavami — má vlastního vlastníka.
+ * `scope` decides who owns the value (§4.4): `postava` scales store values in
+ * `character_scale_values`, `domacnost` scales in `household_scale_values`.
+ * A shared value is never copied between characters; it has its own owner.
  */
 export const scales = pgTable(
   'scales',
@@ -33,18 +31,17 @@ export const scales = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** Klíč škály bez prefixu postavy: `Wealth`. */
+    /** Scale key without the character prefix: `Wealth`. */
     key: text('key').notNull(),
-    /** Jak se škála jmenuje v UI a v přehledu. */
     label: text('label').notNull(),
     description: text('description'),
     minValue: integer('min_value').notNull().default(1),
     maxValue: integer('max_value').notNull().default(10),
-    /** Komu hodnota patří — postavě, nebo domácnosti (§4.4). */
+    /** Who owns the value — the character or the household (§4.4). */
     scope: scaleScope('scope').notNull().default('postava'),
-    /** Jak se hodnoty slévají při sňatku. Jen u škál s rozsahem `domacnost`. */
+    /** Merge on marriage; `domacnost` scales only. */
     mergeStrategy: mergeStrategy('merge_strategy'),
-    /** Jak se hodnota dělí při rozvodu nebo úmrtí. Jen u `domacnost`. */
+    /** Split on divorce or death; `domacnost` scales only. */
     splitStrategy: splitStrategy('split_strategy'),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
@@ -53,12 +50,11 @@ export const scales = pgTable(
     unique('scales_run_id_key').on(t.runId, t.id),
     unique('scales_run_key_key').on(t.runId, t.key),
     check('scales_range_sane', sql`${t.minValue} < ${t.maxValue}`),
-    // Rozsah 1–10 je rozhodnutí zadání (§4.1), ne konfigurace. Sloupce existují,
-    // aby engine hranice nečetl z kódu, ale ven z 1–10 se dostat nesmí.
+    // 1–10 is a spec decision (§4.1), not config: the columns exist so the engine
+    // reads bounds from data, but they must not leave that range.
     check('scales_range_within_1_10', sql`${t.minValue} >= 1 and ${t.maxValue} <= 10`),
-    // Strategie slévání a dělení mají smysl jen u sdílených škál. Vyžadovat je
-    // právě tam drží data poctivá — jinak by u škály postavy ležela nastavení,
-    // která nikdo nikdy nepoužije, a nebylo by poznat, co je záměr.
+    // Merge and split only mean something on shared scales; requiring them exactly
+    // there keeps settings that nobody would ever use off character scales.
     check(
       'scales_household_strategies',
       sql`(${t.scope} = 'domacnost') = (${t.mergeStrategy} is not null and ${t.splitStrategy} is not null)`,
@@ -72,11 +68,9 @@ export const scales = pgTable(
 )
 
 /**
- * Pásmo škály (§4.1). Prahy **i názvy jsou v datech, nikdy v kódu.**
- *
- * Výchozí rozdělení je 1–3 / 4–5 / 6–8 / 9–10, ale počet pásem i hranice
- * jsou vlastní pro každou škálu — `Wealth` má „Na dně / Vyžije / Zajištěná /
- * Zazobaná", `Regime` úplně jiné.
+ * Scale band (§4.1). Thresholds and names live in data, never in code: the
+ * default split is 1–3 / 4–5 / 6–8 / 9–10, but both the count and the bounds
+ * are per scale.
  */
 export const scaleBands = pgTable(
   'scale_bands',
@@ -86,9 +80,9 @@ export const scaleBands = pgTable(
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
     scaleId: uuid('scale_id').notNull(),
-    /** Pořadí pásma od nejnižšího, od 1. */
+    /** Ascending from the lowest band, starting at 1. */
     ordinal: integer('ordinal').notNull(),
-    /** Hranice včetně: pásmo 1–3 má minValue=1, maxValue=3. */
+    /** Inclusive bounds: band 1–3 is minValue=1, maxValue=3. */
     minValue: integer('min_value').notNull(),
     maxValue: integer('max_value').notNull(),
     name: text('name').notNull(),
@@ -108,11 +102,9 @@ export const scaleBands = pgTable(
 )
 
 /**
- * Které škály se u které postavy vůbec sledují.
- *
- * Ne každá postava má každou škálu; zdrojová tabulka to říká přes ID tvaru
- * `S_<Postava>_<Skala>` (§4.2). Tady je ten vztah rozložený na postavu + škálu
- * a nese počáteční hodnotu pro kapitolu 1 z listu `Characters`.
+ * Which scales are tracked for which character — not every character has every
+ * scale. The source spreadsheet expresses this as `S_<Postava>_<Skala>` (§4.2);
+ * here it is decomposed into character + scale.
  */
 export const characterScales = pgTable(
   'character_scales',
@@ -123,9 +115,9 @@ export const characterScales = pgTable(
       .references(() => runs.id, { onDelete: 'restrict' }),
     characterId: uuid('character_id').notNull(),
     scaleId: uuid('scale_id').notNull(),
-    /** Plné ID ze zdrojové tabulky, např. `S_Marie_Wealth`. */
+    /** Full ID from the source spreadsheet, e.g. `S_Marie_Wealth`. */
     externalId: text('external_id').notNull(),
-    /** Počáteční hodnota pro kapitolu 1 (§4.2, list `Characters`). */
+    /** Starting value for chapter 1 (§4.2, `Characters` sheet). */
     initialValue: integer('initial_value').notNull(),
     sourceConfigVersionId: uuid('source_config_version_id').notNull(),
     createdAt: createdAt(),
@@ -154,8 +146,8 @@ export const characterScales = pgTable(
 )
 
 /**
- * Definice příznaku (§4.1): `Svatba`, `Odchod_do_duchodu`, `Firemni_byt`.
- * Škály jsou preferované; příznak je pro události, které opravdu jsou ano/ne.
+ * Flag definition (§4.1): `Svatba`, `Odchod_do_duchodu`, `Firemni_byt`.
+ * Scales are preferred; flags are for events that really are yes/no.
  */
 export const flags = pgTable(
   'flags',

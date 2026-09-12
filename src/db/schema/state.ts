@@ -20,23 +20,21 @@ import { computations } from './computations'
 import { chapters, runs } from './runs'
 
 /**
- * Stav postav a skupin v kapitole — snapshoty (§4.3).
+ * Per-chapter snapshots of character and group state (§4.3).
  *
- * Stav se **ukládá jako snapshot po každé kapitole a nikdy se nepřepisuje.**
- * Každý řádek nese `computation_id` verze přepočtu, která ho vyrobila;
- * `NULL` znamená počáteční stav z konfigurace (kapitola 1).
+ * State is snapshotted after each chapter and never overwritten. Every row
+ * carries the `computation_id` that produced it; `NULL` is the initial state
+ * from config (chapter 1).
  *
- * Tyhle tabulky jsou dotazovatelná projekce toho, co drží
- * `computations.result_json` — díky nim jde vypsat přehled škál všech postav
- * jedním dotazem, aniž by se prohrabával JSON.
+ * These tables are a queryable projection of `computations.result_json`, so an
+ * overview of everyone's scales is one query rather than a JSON dig.
  */
 
 /**
- * Hodnota škály postavy v kapitole.
+ * A character's scale value in a chapter.
  *
- * Celé číslo v rozsahu 1–10 (kontrolované i databází). `wasClamped` a `rawValue`
- * drží, co engine spočítal **před** ořezem — bez toho se špatně nakalibrované
- * váhy nepoznají.
+ * `wasClamped` and `rawValue` keep what the engine computed before clamping —
+ * without them badly calibrated weights go unnoticed.
  */
 export const characterScaleValues = pgTable(
   'character_scale_values',
@@ -48,15 +46,15 @@ export const characterScaleValues = pgTable(
     chapterId: uuid('chapter_id').notNull(),
     characterId: uuid('character_id').notNull(),
     scaleId: uuid('scale_id').notNull(),
-    /** Výsledná hodnota po ořezu. */
+    /** Final value, after clamping. */
     value: integer('value').notNull(),
-    /** Hodnota před ořezem, když se ořezávalo. */
+    /** Value before clamping, when clamping happened. */
     rawValue: integer('raw_value'),
     wasClamped: boolean('was_clamped').notNull().default(false),
-    /** Pásmo vyhodnocené z hodnoty (krok 4 pořadí vyhodnocení, §7.3). */
+    /** Band derived from the value (§7.3, step 5). */
     bandId: uuid('band_id'),
     source: stateSource('source').notNull(),
-    /** Verze přepočtu, která hodnotu vyrobila. NULL = počáteční stav. */
+    /** The computation that produced this value; NULL is the initial state. */
     computationId: uuid('computation_id'),
     createdAt: createdAt(),
   },
@@ -97,10 +95,7 @@ export const characterScaleValues = pgTable(
   ],
 )
 
-/**
- * Hodnota příznaku u postavy v kapitole. Příznak se nemaže — zrušení je nový
- * řádek s `value = false`.
- */
+/** A character's flag in a chapter. Nothing is deleted: clearing is a new row with `value = false`. */
 export const characterFlags = pgTable(
   'character_flags',
   {
@@ -143,10 +138,7 @@ export const characterFlags = pgTable(
   ],
 )
 
-/**
- * Členství a vedení skupiny jako snapshot na kapitolu.
- * Kdo skupinu vede, je `role = 'vedouci'`.
- */
+/** Per-chapter snapshot of group membership; the leader is `role = 'vedouci'`. */
 export const groupMemberships = pgTable(
   'group_memberships',
   {
@@ -190,14 +182,14 @@ export const groupMemberships = pgTable(
 )
 
 /**
- * Kdo je v které domácnosti — snapshot na kapitolu (§4.4).
+ * Who lives in which household — a per-chapter snapshot (§4.4).
  *
- * **Postava smí být v jednu chvíli nejvýše v jedné domácnosti.** Vynucuje to
- * unikát na (běh, kapitola, postava, verze přepočtu), ne jen kontrola
- * konzistence — je to invariant, na kterém stojí čtení sdílených hodnot.
+ * A character is in at most one household at a time, enforced by a unique on
+ * (run, chapter, character, computation) rather than by a consistency check:
+ * reading shared values rests on that invariant.
  *
- * Při založení běhu dostane každá postava vlastní domácnost o jednom členovi,
- * takže tahle tabulka je vždy plná a engine nepotřebuje větev pro „bez domácnosti".
+ * Every character gets a household of one when the run starts, so this table is
+ * never sparse and the engine needs no "no household" branch.
  */
 export const householdMemberships = pgTable(
   'household_memberships',
@@ -241,15 +233,14 @@ export const householdMemberships = pgTable(
 )
 
 /**
- * Hodnota **sdílené** škály (§4.4) — vlastníkem je domácnost, ne postava.
+ * A shared scale's value (§4.4) — owned by the household, not by a character.
  *
- * Škály s rozsahem `postava` patří do `character_scale_values`, škály
- * s rozsahem `domacnost` sem. Že řádek odpovídá rozsahu své škály, databáze
- * neuhlídá (je to křížem přes tabulky) — hlídá to kontrola konzistence §11.
+ * `postava` scales belong in `character_scale_values`, `domacnost` ones here.
+ * The database cannot check that a row matches its scale's scope (it spans
+ * tables); the §11 consistency check does.
  *
- * Ořez se drží stejně jako u škál postavy: `raw_value` je hodnota před ořezem.
- * U sdílené škály je to o to důležitější, že do ní přispívá víc lidí, takže
- * se hranice dosáhne snáz.
+ * Clamping is recorded as for character scales. It matters more here: several
+ * people contribute, so the bound is reached sooner.
  */
 export const householdScaleValues = pgTable(
   'household_scale_values',
@@ -307,14 +298,14 @@ export const householdScaleValues = pgTable(
 )
 
 /**
- * Proměnné postavy pro naplnění šablony (§8.4, §8.8): `{JMENO}`, `{PRIJMENI}`,
- * `{VEK}`, `{SKUPINA}` a cokoli dalšího, co si autor v šabloně vymyslí.
+ * Template variables (§8.4, §8.8): `{JMENO}`, `{PRIJMENI}`, `{VEK}`,
+ * `{SKUPINA}` and whatever else a template author invents.
  *
- * Proč vlastní tabulka: příjmení se sňatkem mění a věk roste s každým časovým
- * skokem, takže hodnota je **per kapitola**, ne per postava. Kdyby se přepisovala
- * `characters.last_name`, ztratí se historie a poruší se pravidlo 3.
+ * A table of its own because a surname changes with marriage and age grows with
+ * every time skip, so the value is per chapter, not per character. Overwriting
+ * `characters.last_name` would lose the history and break rule 3.
  *
- * Hodnota, která pro kapitolu chybí, se dopočítá z `characters` a stavu postavy.
+ * A value missing for a chapter is derived from `characters` and the state.
  */
 export const characterVariables = pgTable(
   'character_variables',
@@ -325,7 +316,7 @@ export const characterVariables = pgTable(
       .references(() => runs.id, { onDelete: 'restrict' }),
     chapterId: uuid('chapter_id').notNull(),
     characterId: uuid('character_id').notNull(),
-    /** Název bez složených závorek, velkými písmeny: `PRIJMENI`, `VEK`. */
+    /** Name without braces, upper case: `PRIJMENI`, `VEK`. */
     key: text('key').notNull(),
     value: text('value').notNull(),
     source: stateSource('source').notNull(),
@@ -357,15 +348,14 @@ export const characterVariables = pgTable(
 )
 
 /**
- * Hod kostkou (§7.4). Hodí se **jednou** a uloží se jako data u postavy,
- * kapitoly a pravidla — stejně jako odpověď hráče.
+ * A dice roll (§7.4). Rolled once and stored per character, chapter and rule,
+ * exactly like a player's answer.
  *
- * **Přepočet hod neopakuje**, použije uložené číslo. Přehodit nebo přepsat lze
- * jen výslovnou akcí orga; předchozí hodnota zůstává v `previousValue` a celá
- * změna jde do auditu.
+ * Recomputation never re-rolls; only an explicit org action can, keeping the old
+ * number in `previousValue` and the whole change in the audit.
  *
- * Vlastní tabulka (a ne sloupec v `answers`) proto, že hod je navázaný na
- * **pravidlo**, ne na otázku.
+ * A table of its own rather than a column on `answers`, because a roll belongs
+ * to a rule, not to a question.
  */
 export const diceRolls = pgTable(
   'dice_rolls',
@@ -379,9 +369,9 @@ export const diceRolls = pgTable(
     ruleId: uuid('rule_id').notNull(),
     sides: integer('sides').notNull(),
     value: integer('value').notNull(),
-    /** Hodnota před přehozením nebo ručním přepsáním. */
+    /** Value before a re-roll or a manual override. */
     previousValue: integer('previous_value'),
-    /** Org číslo přepsal ručně, nepadlo. */
+    /** The org typed the number in; it was not rolled. */
     isManualOverride: boolean('is_manual_override').notNull().default(false),
     rerollCount: integer('reroll_count').notNull().default(0),
     rolledAt: timestamp('rolled_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

@@ -1,10 +1,10 @@
--- Audit log je append-only (§2 bod 2, §13).
+-- The audit log is append-only (§2, §13).
 --
--- Drizzle tohle nevyjádří, takže je to ruční SQL, které se pouští po migracích
--- (`npm run db:sql`). Je idempotentní.
+-- Drizzle cannot express this, so it is hand-written idempotent SQL run after
+-- the migrations (`npm run db:sql`).
 --
--- Bez tohohle triggeru je "append-only" jen slib v dokumentaci. S ním to
--- databáze odmítne, i kdyby se v kódu spletl update.
+-- Without the trigger, "append-only" is a promise in documentation; with it the
+-- database refuses an update even if the code gets it wrong.
 
 create or replace function audit_log_append_only() returns trigger as $$
 begin

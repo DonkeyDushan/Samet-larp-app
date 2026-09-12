@@ -1,13 +1,13 @@
 /**
- * Datové schéma aplikace. Jediný zdroj pravdy o struktuře databáze —
- * migrace se z něj generují (`npm run db:generate`), nepíšou se ručně.
+ * The single source of truth about database structure — migrations are
+ * generated from it (`npm run db:generate`), never written by hand.
  *
- * Architektonická pravidla, která schéma vynucuje:
- *  1. `run_id` je v každé tabulce s herními daty a každý odkaz uvnitř běhu je
- *     složený cizí klíč `(run_id, id)`. Data dvou běhů se nemají jak potkat.
- *  2. Nic se nemaže: všechny cizí klíče jsou `on delete restrict`.
- *  3. Stav se verzuje, nepřepisuje: snapshoty stavu nesou `computation_id`.
- *  4. `audit_log` je append-only, vynuceno triggerem v `db/sql/`.
+ * Architecture rules the schema enforces:
+ *  1. `run_id` in every game-data table; every in-run reference is a composite
+ *     foreign key `(run_id, id)`, so two runs' data cannot meet.
+ *  2. Nothing is deleted: every foreign key is `on delete restrict`.
+ *  3. State is versioned, not overwritten: snapshots carry `computation_id`.
+ *  4. `audit_log` is append-only, enforced by a trigger in `db/sql/`.
  */
 export * from './enums'
 export * from './runs'

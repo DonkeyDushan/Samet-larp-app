@@ -1,17 +1,10 @@
 /**
- * Typy enginu pravidel (§7).
+ * Rules engine types (§7).
  *
- * Engine je **čistá funkce** — bez databáze, bez sítě, bez Reactu, bez importů
- * z `app/`. Tenhle soubor proto neimportuje nic z `src/db`: ID jsou obyčejné
- * stringy a struktury jsou prosté objekty, které si volající poskládá z DB
- * (nebo v testu napíše rukou).
- *
- * Architektonické pravidlo 1: `evaluate(stav, odpovědi, pravidla) → { stav, trace }`.
+ * The engine is a pure function, so this file imports nothing from `src/db`:
+ * IDs are plain strings and structures are plain objects the caller assembles
+ * from the DB (or writes by hand in a test).
  */
-
-// ---------------------------------------------------------------------------
-// Identifikátory
-// ---------------------------------------------------------------------------
 
 export type CharacterId = string
 export type GroupId = string
@@ -22,20 +15,16 @@ export type HouseholdId = string
 export type QuestionId = string
 export type AnswerOptionId = string
 export type RuleId = string
-/** ID bloku v šabloně, tedy `{BLOK <ID>}` (§8.4). */
+/** Template block `{BLOK <ID>}` (§8.4). */
 export type BlockId = string
 
 export type ChapterNumber = 1 | 2 | 3
 
-// ---------------------------------------------------------------------------
-// Konfigurace: co engine ví o světě
-// ---------------------------------------------------------------------------
-
-/** Pásmo škály. Prahy i název jsou vždy z dat, nikdy z kódu (§4.1). */
+/** Thresholds and names always come from data, never from code (§4.1). */
 export interface BandDefinition {
   id: BandId
   ordinal: number
-  /** Hranice včetně. */
+  /** Inclusive bounds. */
   min: number
   max: number
   name: string
@@ -45,23 +34,22 @@ export interface ScaleDefinition {
   id: ScaleId
   key: string
   label: string
-  /** Rozsah škály; v téhle hře vždy 1–10 (§4.1). */
   min: number
   max: number
   /**
-   * Komu hodnota patří (§4.4). `domacnost` znamená, že hodnotu drží domácnost
-   * a všichni její členové čtou a mění tutéž — nikdy se nekopíruje.
+   * Who owns the value (§4.4). `domacnost` means the household holds it and
+   * all members read and change the same one — it is never copied.
    */
   scope: 'postava' | 'domacnost'
   /**
-   * Jak se hodnoty slévají při sňatku. Jen u `scope: 'domacnost'`.
-   * `otazka` = **nedopočítávat**, hodnota přijde z odpovědi nebo od orga.
-   * Tak je to u peněz: kolik kdo do společného vložil, si hráči rozehrávají sami.
+   * Merge on marriage; household scales only. `otazka` means do NOT compute —
+   * the value comes from an answer or from the org, which is how money works:
+   * players decide themselves how much each partner contributed.
    */
   mergeStrategy?: 'soucet' | 'prumer' | 'vyssi' | 'otazka'
-  /** Jak se hodnota dělí při rozvodu nebo úmrtí. Jen u `scope: 'domacnost'`. */
+  /** Split on divorce or death; household scales only. */
   splitStrategy?: 'kopie' | 'polovina' | 'otazka'
-  /** Vzestupně podle `ordinal`. Nemusí pokrývat celý rozsah beze zbytku. */
+  /** Ascending by `ordinal`. Need not cover the whole range. */
   bands: BandDefinition[]
 }
 
@@ -74,25 +62,25 @@ export interface FlagDefinition {
 export interface QuestionDefinition {
   id: QuestionId
   externalId: string
-  /** Otázky jsou vlastní pro každou postavu (§6.6). */
+  /** Questions are per character; there is no shared set (§6.6). */
   characterId: CharacterId
   chapter: ChapterNumber
   type: 'bool' | 'single' | 'multi' | 'scale_direct' | 'text'
   ordinal: number
   text: string
   /**
-   * Kdo otázku vyplňuje (§6.7). Pro engine je to **jen jiný zdroj vstupu**,
-   * ne jiný mechanismus — s jednou výjimkou: `scale_direct` od orga nastavuje
-   * hodnotu absolutně na začátku hodnotové fáze (viz `TracePhase`).
+   * Input source only, not a different mechanism (§6.7) — with one exception:
+   * `scale_direct` from the org sets the value absolutely at the start of the
+   * value phase (see `TracePhase`).
    */
   source: 'hrac' | 'org'
   /**
-   * Párová otázka (§6.7) — sňatek. V datech existuje **jedna odpověď**,
-   * ne dvě zrcadlené; druhá postava ji vidí provázanou. Engine proto nesmí
-   * čekat odpověď i u druhé postavy.
+   * Paired question, i.e. marriage (§6.7). There is a single answer row, not
+   * two mirrored ones, so the engine must not expect one from the other
+   * character too.
    */
   isPaired: boolean
-  /** Cílová škála u typu `scale_direct`. */
+  /** Target scale for `scale_direct`. */
   scaleId?: ScaleId
   options: AnswerOptionDefinition[]
 }
@@ -101,10 +89,9 @@ export interface AnswerOptionDefinition {
   id: AnswerOptionId
   externalId: string
   label: string
-  /** Volba jmenuje jinou postavu → odkaz na ID z registru, ne volný text (§6.6). */
+  /** Naming another character means a registry ID, never free text (§6.6). */
   referencedCharacterId?: CharacterId
   isOther: boolean
-  /** Dopady volby na škály a příznaky (sloupec dopadu z §4.2). */
   effects: Effect[]
 }
 
@@ -120,28 +107,19 @@ export interface CharacterDefinition {
   firstName: string
   lastName: string
   birthYear?: number
-  /** Které škály se u postavy sledují. */
   scaleIds: ScaleId[]
 }
 
-// ---------------------------------------------------------------------------
-// Pravidla
-// ---------------------------------------------------------------------------
-
 /**
- * Dílčí podmínka. **Strukturovaná, nikdy text** — vlastní jazyk na výrazy
- * se v tomhle projektu nepíše (§15).
- *
- * `characterId` nevyplněné znamená „postava, která se právě vyhodnocuje".
+ * One condition, always structured and never parsed from text (§15).
+ * An empty `characterId` means "the character currently being evaluated".
  */
 export interface RuleCondition {
-  /** Skupina podmínek; skupiny se mezi sebou spojují vždy `OR`. */
+  /** Groups are always joined by `OR`. */
   groupIndex: number
-  /** Pořadí ve skupině. */
   position: number
-  /** Spojka vůči **předchozí** podmínce ve skupině. U první se ignoruje. */
+  /** Joins this condition to the previous one in the group; ignored on the first. */
   connector: 'AND' | 'OR'
-  /** Negace dílčí podmínky (`NOT A`). */
   negate: boolean
 
   subject: 'odpoved' | 'skala' | 'pasmo' | 'priznak' | 'clenstvi' | 'vedeni' | 'hod'
@@ -172,7 +150,7 @@ export interface RuleCondition {
   valueList?: string[]
 }
 
-/** Jedna akce pravidla nebo volby odpovědi (§7.1). */
+/** One action of a rule or of an answer option (§7.1). */
 export type Effect =
   | { kind: 'zmena_skaly'; characterId?: CharacterId; scaleId: ScaleId; delta: number; weight: number; usesDiceValue?: boolean }
   | { kind: 'nastaveni_skaly'; characterId?: CharacterId; scaleId: ScaleId; value: number }
@@ -182,7 +160,7 @@ export type Effect =
   | {
       kind: 'clenstvi'
       characterId?: CharacterId
-      /** Koho přidat/odebrat, když to určuje odpověď (§7.3). */
+      /** Target taken from the character the chosen answer option refers to (§7.3). */
       relatedCharacterId?: CharacterId
       relatedFromAnswer?: boolean
       groupId: GroupId
@@ -191,56 +169,47 @@ export type Effect =
   | {
       kind: 'vedeni'
       characterId?: CharacterId
-      /** Kdo se stal vedoucím, když to určuje odpověď (§7.3). */
       relatedCharacterId?: CharacterId
       relatedFromAnswer?: boolean
       groupId: GroupId
       role: 'clen' | 'vedouci'
     }
   | { kind: 'tag'; characterId?: CharacterId; code: string; note?: string }
-  /**
-   * Sloučení domácností při sňatku (§4.4). Partner je buď jmenovaný,
-   * nebo se bere z postavy, na kterou odkazuje vybraná volba odpovědi.
-   */
   | {
       kind: 'domacnost_slouceni'
       characterId?: CharacterId
-      /** Partner. Jmenovitě, nebo z postavy, na kterou odkazuje odpověď. */
+      /** The partner: named, or taken from the character the answer refers to. */
       relatedCharacterId?: CharacterId
       relatedFromAnswer?: boolean
     }
-  /** Rozdělení domácnosti při rozvodu nebo úmrtí (§4.4). */
   | { kind: 'domacnost_rozdeleni'; characterId?: CharacterId }
 
 /**
- * Pravidlo: `PODMÍNKA → EFEKT [priorita, váha]`.
+ * `CONDITION → EFFECT [priority, weight]`.
  *
- * `isExclusion` je vyloučení („pokud E a zároveň F, pak D nikdy nenastane").
- * **Vyloučení má vždy přednost před přiřazením** a aplikuje se dřív než efekty.
+ * `isExclusion` marks a rule that prevents an outcome. Exclusions always win
+ * over assignment and are applied before any effects.
  */
 export interface Rule {
   id: RuleId
   externalId: string
   name: string
   description?: string
-  /** NULL v datech → pravidlo platí ve všech kapitolách. */
+  /** NULL in data means the rule applies in every chapter. */
   chapter?: ChapterNumber
   priority: number
   weight: number
   isExclusion: boolean
   isEnabled: boolean
-  /**
-   * „Aplikovat jednou za domácnost" (§4.4). Bez tohohle příznaku se efekty
-   * členů na sdílenou škálu **sčítají**.
-   */
+  /** Without this flag, member effects on a shared scale add up (§4.4). */
   appliesOncePerHousehold: boolean
-  /** Pravidlo si vyžádá hod kostkou o tolika stěnách (§7.4). */
+  /** Rule requires a dice roll with this many sides (§7.4). */
   diceSides?: number
   conditions: RuleCondition[]
   effects: Effect[]
 }
 
-/** Třetí argument `evaluate` — pravidla plus všechno, co k jejich čtení patří. */
+/** Third argument of `evaluate`: rules plus everything needed to read them. */
 export interface RuleSet {
   chapter: ChapterNumber
   rules: Rule[]
@@ -251,41 +220,32 @@ export interface RuleSet {
   questions: QuestionDefinition[]
 }
 
-// ---------------------------------------------------------------------------
-// Stav
-// ---------------------------------------------------------------------------
-
 export interface Membership {
   groupId: GroupId
   role: 'clen' | 'vedouci'
 }
 
-/** Stav postavy: škály, příznaky, členství, proměnné. Nic víc (§4.2). */
 export interface CharacterState {
   characterId: CharacterId
-  /**
-   * Hodnoty škál s rozsahem `postava`. Sdílené škály tady **nejsou** —
-   * leží v `HouseholdState`, aby se hodnota nekopírovala (§4.4).
-   */
+  /** `postava`-scoped values only; shared ones live in `HouseholdState` (§4.4). */
   scales: Record<ScaleId, number>
-  /** Pásmo dopočítané z hodnoty; drží se kvůli výstupům a podmínkám. */
+  /** Derived from the value; kept for outputs and conditions. */
   bands: Record<ScaleId, BandId>
   flags: Record<FlagId, boolean>
   memberships: Membership[]
   /**
-   * Domácnost postavy. Vždy vyplněná — svobodná postava je domácnost
-   * o jednom členovi, takže engine nemá větev pro „bez domácnosti" (§4.4).
+   * Always set — a single character is a household of one, so the engine has
+   * no "no household" branch (§4.4).
    */
   householdId: HouseholdId
-  /** Proměnné do šablony: `{PRIJMENI}`, `{VEK}`, … (§8.8). */
+  /** Template variables: `{PRIJMENI}`, `{VEK}`, … (§8.8). */
   variables: Record<string, string>
 }
 
-/** Stav domácnosti — vlastník sdílených hodnot (§4.4). */
+/** Owner of shared values (§4.4). */
 export interface HouseholdState {
   householdId: HouseholdId
   memberIds: CharacterId[]
-  /** Hodnoty škál s rozsahem `domacnost`. */
   scales: Record<ScaleId, number>
   bands: Record<ScaleId, BandId>
 }
@@ -296,7 +256,7 @@ export interface GroupState {
   memberIds: CharacterId[]
 }
 
-/** První argument `evaluate` — stav na začátku kapitoly. */
+/** First argument of `evaluate`: state at the start of the chapter. */
 export interface RunState {
   runId: string
   chapter: ChapterNumber
@@ -305,13 +265,9 @@ export interface RunState {
   households: Record<HouseholdId, HouseholdState>
 }
 
-// ---------------------------------------------------------------------------
-// Vstupy
-// ---------------------------------------------------------------------------
-
 /**
- * Zadaná odpověď. Odpověď, která v seznamu **není**, je chybějící — engine
- * si nic nedomýšlí a přepočet se nesmí dokončit (§6.3).
+ * A recorded answer. An answer absent from the list counts as missing — the
+ * engine fills in nothing and the computation must not finish (§6.3).
  */
 export interface AnswerInput {
   questionId: QuestionId
@@ -320,14 +276,12 @@ export interface AnswerInput {
   numericValue?: number
   textValue?: string
   selectedOptionIds?: AnswerOptionId[]
-  /** Odpověď vyklikal org, nepřišla od hráče (§6.3). */
   filledByOrg: boolean
 }
 
 /**
- * Už hozená kostka. Engine **nikdy nehodí sám** — dostane uloženou hodnotu
- * a pracuje s ní (§7.4). Chybějící hod u pravidla, které ho vyžaduje, je
- * blokující chybějící vstup, stejně jako chybějící odpověď.
+ * An already rolled die. The engine never rolls (§7.4); a missing roll blocks
+ * the computation the same way a missing answer does.
  */
 export interface DiceInput {
   ruleId: RuleId
@@ -336,63 +290,46 @@ export interface DiceInput {
   value: number
 }
 
-/** Druhý argument `evaluate`. */
+/** Second argument of `evaluate`. */
 export interface EvaluationInputs {
   answers: AnswerInput[]
   dice: DiceInput[]
 }
 
-// ---------------------------------------------------------------------------
-// Trace: podklad pro odpověď na „proč"
-// ---------------------------------------------------------------------------
-
 /**
- * Jeden příspěvek k výsledku. Z těchhle položek UI skládá větu typu
- * „Protože Marie odpověděla ‚Karel' na Q_Marie1_1 (+3 Wealth) a je členkou
- * Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."
- *
- * Trace nese **data s popisky, ne hotovou větu** — formulace je věc UI
- * a musí jít změnit bez přepočítávání.
+ * One contribution to a result. Carries labelled data, not a finished
+ * sentence — the wording belongs to the UI and must be changeable without
+ * recomputing.
  */
 export interface TraceContribution {
   sourceKind: 'odpoved' | 'pravidlo' | 'hod' | 'pocatecni' | 'rucni'
   sourceId: string
-  /** Čitelný popis zdroje: „odpověď ‚Karel' na Q_Marie1_1". */
+  /** Readable source description, e.g. the answer `Karel` to `Q_Marie1_1`. */
   label: string
   /**
-   * Od které postavy příspěvek přišel. **U sdílené škály povinné** (§4.4):
-   * Mariiny peníze se mohou změnit kvůli Mirkově odpovědi a bez tohohle pole
-   * to nejde vysvětlit — byl by to přesně ten black box, který §2 zakazuje.
+   * Which character the contribution came from. Required on shared scales
+   * (§4.4): Marie's money can change because of Mirek's answer, and without
+   * this there is no way to explain it.
    */
   characterId?: CharacterId
-  /**
-   * Domácnost, ze které příspěvek přišel. Vyplněné u sloučení a rozdělení,
-   * kde §4.4 vyžaduje **uvést obě původní hodnoty**.
-   */
+  /** Set on merge and split, where §4.4 requires both original values. */
   householdId?: HouseholdId
-  /** Příspěvek k číselné hodnotě, už po vynásobení vahou. */
+  /** Contribution to the numeric value, weight already applied. */
   delta?: number
-  /** Původní hodnota zdroje — u sloučení domácností obě vstupní hodnoty. */
+  /** Source value — on a household merge, each of the two inputs. */
   value?: number
   weight?: number
 }
 
 /**
- * Fáze fixního pořadí vyhodnocení (§7.3):
+ * Fixed evaluation order (§7.3): collect answers, apply exclusions, structural
+ * changes (households, marriages, membership, leadership), then values
+ * (absolute `scale_direct` settings first, then scale and flag changes by
+ * descending priority), then bands, then leftover conflicts.
  *
- * 1. `sber` — sběr všech odpovědí
- * 2. `vylouceni` — aplikace vyloučení (negací); má přednost před přiřazením
- * 3. `strukturalni` — vznik a zánik domácností, sňatky, členství a vedení skupin
- * 4. `hodnotove` — **nejprve absolutní nastavení** z organizátorských otázek
- *    `scale_direct` (§6.7), pak změny škál a příznaků podle priority sestupně
- * 5. `pasma` — vyhodnocení pásem na škálách
- * 6. `konflikty` — detekce a nahlášení zbylých konfliktů
- *
- * **Fáze `strukturalni` musí proběhnout celá před `hodnotove`.** Sdílená škála
- * potřebuje vědět, kdo do domácnosti patří, dřív než se do ní začnou sčítat
- * příspěvky. Kdyby se sňatek vyhodnotil až mezi změnami škál, výsledek by
- * závisel na pořadí pravidel — a to je přesně ten nedeterminismus, kterému
- * se vyhýbáme (§2, bod 3).
+ * `strukturalni` must complete before `hodnotove`: a shared scale needs to know
+ * its household members before contributions are summed into it. Evaluating a
+ * marriage in between scale changes would make the result depend on rule order.
  */
 export type TracePhase =
   | 'sber'
@@ -403,9 +340,8 @@ export type TracePhase =
   | 'konflikty'
 
 /**
- * Které druhy efektů patří do strukturální fáze (§7.3, krok 3).
- * Rozdělení je tady v datech, aby ho nešlo v implementaci `evaluate`
- * omylem obejít — pořadí fází je invariant, ne detail.
+ * Phase membership lives in data so an `evaluate` implementation cannot work
+ * around it — the phase order is an invariant, not a detail (§7.3).
  */
 export const STRUCTURAL_EFFECT_KINDS = [
   'domacnost_slouceni',
@@ -414,7 +350,6 @@ export const STRUCTURAL_EFFECT_KINDS = [
   'vedeni',
 ] as const
 
-/** Které druhy efektů patří do hodnotové fáze (§7.3, krok 4). */
 export const VALUE_EFFECT_KINDS = [
   'nastaveni_skaly',
   'zmena_skaly',
@@ -428,9 +363,8 @@ export type StructuralEffectKind = (typeof STRUCTURAL_EFFECT_KINDS)[number]
 export type ValueEffectKind = (typeof VALUE_EFFECT_KINDS)[number]
 
 export interface TraceEntry {
-  /** Stabilní ID záznamu v rámci jednoho přepočtu. */
   id: string
-  /** Pořadí vzniku; trace je posloupnost, ne množina. */
+  /** Trace is a sequence, not a set. */
   order: number
   phase: TracePhase
   kind:
@@ -449,21 +383,20 @@ export interface TraceEntry {
 
   characterId?: CharacterId
   groupId?: GroupId
-  /** Vyplněné u změn na sdílené škále a u vzniku/zániku domácnosti (§4.4). */
+  /** Set on shared-scale changes and on household merge/split (§4.4). */
   householdId?: HouseholdId
 
-  /** Čeho se změna týká — škála, příznak, blok, skupina, domácnost. */
   subject: {
     kind: 'skala' | 'priznak' | 'blok' | 'skupina' | 'tag' | 'domacnost'
     id: string
     label: string
   }
 
-  /** Hodnota před a po. U bloků a tagů `before` chybí. */
+  /** `before` is absent on blocks and tags. */
   before?: number | string | boolean | null
   after?: number | string | boolean | null
 
-  /** Pravidlo, které změnu způsobilo. Chybí u počátečního stavu a ruční úpravy. */
+  /** Absent for the initial state and for manual edits. */
   ruleId?: RuleId
   ruleName?: string
   rulePriority?: number
@@ -472,13 +405,9 @@ export interface TraceEntry {
   note?: string
 }
 
-// ---------------------------------------------------------------------------
-// Výstupy, které blokují potvrzení
-// ---------------------------------------------------------------------------
-
 /**
- * Dvě pravidla se **stejnou** prioritou dala protichůdný výsledek. Engine to
- * nerozhoduje sám — vyhodí to do UI a nechá rozhodnout orga (§7.3).
+ * Two rules of equal priority produced opposite results. The engine does not
+ * decide — it hands this to the UI for the org to resolve (§7.3).
  */
 export interface Conflict {
   id: string
@@ -490,11 +419,10 @@ export interface Conflict {
     label: string
   }
   priority: number
-  /** Pravidla, která si navzájem odporují, a co každé chtělo. */
   candidates: { ruleId: RuleId; ruleName: string; proposed: number | string | boolean }[]
 }
 
-/** Chybějící vstup — přepočet nelze dokončit (§6.3). */
+/** Missing input — the computation cannot finish (§6.3). */
 export interface MissingInput {
   kind: 'odpoved' | 'hod'
   characterId: CharacterId
@@ -504,13 +432,11 @@ export interface MissingInput {
 }
 
 /**
- * Ořez škály na hranici (§4.1). Je to **signál špatně nastavených vah**,
- * proto se hlásí zvlášť a zapisuje do auditu, ne že by se jen tiše uřízl.
+ * Scale clamped at a bound (§4.1). Reported separately and written to the
+ * audit log because it signals badly tuned weights.
  */
 export interface ClampEvent {
-  /** Vyplněné u škály s rozsahem `postava`. */
   characterId?: CharacterId
-  /** Vyplněné u sdílené škály (§4.4). */
   householdId?: HouseholdId
   scaleId: ScaleId
   rawValue: number
@@ -518,7 +444,7 @@ export interface ClampEvent {
   bound: 'min' | 'max'
 }
 
-/** Vybraný blok šablony — vstup pro naplnění dokumentu mazáním (§8.2). */
+/** Template block to keep; the rest are deleted (§8.2). */
 export interface SelectedBlock {
   characterId?: CharacterId
   groupId?: GroupId
@@ -526,7 +452,7 @@ export interface SelectedBlock {
   ruleId?: RuleId
 }
 
-/** Vlaječka pro orga: „nastala událost X → vytáhni dokument č. 42" (§8.7). */
+/** Flag for the org: "event X happened → pull document 42" (§8.7). */
 export interface OutputTag {
   characterId?: CharacterId
   code: string
@@ -534,32 +460,22 @@ export interface OutputTag {
   ruleId?: RuleId
 }
 
-// ---------------------------------------------------------------------------
-// Podpis funkce evaluate
-// ---------------------------------------------------------------------------
-
 export interface EvaluateResult {
-  /** Nový stav. Vstupní stav se nemodifikuje — engine je čistý. */
+  /** The input state is not modified — the engine is pure. */
   state: RunState
-  /** Posloupnost všeho, co se stalo a proč (§7.5). */
   trace: TraceEntry[]
-  /** Nevyřešené konflikty. Neprázdné = přepočet nelze potvrdit (§7.3). */
+  /** Non-empty blocks confirming the computation (§7.3). */
   conflicts: Conflict[]
-  /** Chybějící odpovědi a hody. Neprázdné = přepočet nelze spustit (§6.3). */
+  /** Non-empty blocks running the computation at all (§6.3). */
   missingInputs: MissingInput[]
-  /** Ořezy na hranicích škál — do auditu a jako varování autorovi. */
   clamps: ClampEvent[]
-  /** Bloky, které v šabloně zůstanou; ostatní se smažou (§8.2). */
   selectedBlocks: SelectedBlock[]
-  /** Tagy pro fyzické materiály mimo systém (§8.7). */
   tags: OutputTag[]
 }
 
 /**
- * Jediný vstupní bod enginu.
- *
- * Čistá funkce: stejný vstup = stejný výstup (§2, bod 3). Náhoda vstupuje
- * jen jako už hozená hodnota v `inputs.dice`.
+ * The engine's only entry point. Pure: same input, same output — randomness
+ * enters only as an already rolled value in `inputs.dice`.
  */
 export type EvaluateFn = (
   state: RunState,

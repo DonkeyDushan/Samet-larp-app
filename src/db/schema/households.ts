@@ -3,18 +3,19 @@ import { createdAt } from './_shared'
 import { chapters, runs } from './runs'
 
 /**
- * Domácnost (§4.4) — postavy sdílející ekonomické hodnoty, typicky manželé.
+ * Household (§4.4) — characters sharing economic values, typically spouses.
  *
- * Sdílené hodnoty **nesmí být řešené kopírováním mezi postavami**, proto má
- * domácnost vlastní identitu a vlastní hodnoty škál (`household_scale_values`).
+ * Shared values must never be handled by copying between characters, so a
+ * household has its own identity and its own scale values
+ * (`household_scale_values`).
  *
- * Svobodná postava je technicky **domácnost o jednom členovi** — při založení
- * běhu vznikne jedna domácnost na každou postavu. Tím v enginu odpadá zvláštní
- * větev pro „postavu bez domácnosti".
+ * A single character is technically a household of one; one is created per
+ * character when the run starts, which removes the "character without a
+ * household" branch from the engine.
  *
- * Identita domácnosti přežívá kapitoly; kdo v ní je, drží
- * `household_memberships` jako snapshot na kapitolu. Rozvod tedy nemaže
- * domácnost, jen v další kapitole vznikne jiné členství.
+ * The household's identity survives chapters; who belongs to it is a
+ * per-chapter snapshot in `household_memberships`. A divorce therefore deletes
+ * nothing, it just produces different membership in the next chapter.
  */
 export const households = pgTable(
   'households',
@@ -23,11 +24,10 @@ export const households = pgTable(
     runId: text('run_id')
       .notNull()
       .references(() => runs.id, { onDelete: 'restrict' }),
-    /** Generované ID, např. `H_Marie` nebo `H_Marie_Mirek`. */
+    /** Generated ID, e.g. `H_Marie` or `H_Marie_Mirek`. */
     externalId: text('external_id').notNull(),
-    /** Popis pro orga: „Balážová–Pokorný". Do dokumentů nevstupuje. */
+    /** For the org only; never enters documents. */
     label: text('label'),
-    /** Kapitola, ve které domácnost vznikla. */
     createdInChapterId: uuid('created_in_chapter_id').notNull(),
     createdAt: createdAt(),
   },

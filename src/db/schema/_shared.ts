@@ -1,29 +1,26 @@
 /**
- * Společné konvence schématu.
+ * Shared schema conventions.
  *
- * Pravidlo 2 (run_id v každé tabulce): každá tabulka s herními daty nese `run_id`
- * a každý odkaz uvnitř běhu je **složený cizí klíč** `(run_id, <id>)`. Díky tomu
- * databáze sama odmítne odpověď z běhu A navázanou na otázku z běhu B — izolace
- * drží strukturou, ne kázní při psaní dotazů.
+ * Rule 2: every game-data table carries `run_id` and every reference inside a
+ * run is a composite foreign key `(run_id, <id>)`, so the database itself
+ * rejects an answer from run A attached to a question from run B.
  *
- * Pravidlo 3 (nic se nemaže): všechny cizí klíče jsou `onDelete: 'restrict'`.
- * Archivovaný běh zůstává navždy prohlížitelný (§3.2).
+ * Rule 3: every foreign key is `onDelete: 'restrict'` — an archived run stays
+ * browsable forever (§3.2).
  *
- * Názvy tabulek a sloupců jsou anglicky (konvence kódu), hodnoty doménových
- * stavů česky bez diakritiky (§13 — jazyk dat je čeština, ale v SQL literálech
- * se diakritice vyhýbáme).
+ * Domain state values are Czech without diacritics (§13), to keep accents out
+ * of SQL literals.
  */
 import { timestamp, text } from 'drizzle-orm/pg-core'
 
-/** Časová značka vzniku záznamu. */
 export const createdAt = () =>
   timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
 
 /**
- * Kdo akci provedl — volný text z pole „Kdo jsi?" (§3.1).
- * Bez ověřování; jediný zdroj identity v celé aplikaci.
+ * Who did it — free text from the „Kdo jsi?" field (§3.1). Unverified, and the
+ * only source of identity in the app.
  *
- * Název sloupce se předává, protože každá tabulka pojmenovává autora podle
- * toho, co udělal: `created_by`, `answered_by`, `rolled_by`, `author`.
+ * The column name is a parameter because each table names the author after the
+ * act: `created_by`, `answered_by`, `rolled_by`, `author`.
  */
 export const authorName = (column: string) => text(column).notNull()

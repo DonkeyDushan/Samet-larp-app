@@ -1,9 +1,9 @@
 /**
- * Připojení k databázi. Tenká vrstva: kdyby se měnil poskytovatel Postgresu
- * (Neon → něco jiného), mění se **jen tenhle soubor** (§15).
+ * Database connection. Kept thin so that swapping the Postgres provider
+ * touches only this file (§15).
  *
- * Záměrně se neexportuje z `src/db/index.ts` — aplikační kód se k datům
- * dostává výhradně přes `forRun()`, které vyžaduje `runId`. Viz pravidlo 2.
+ * Deliberately not re-exported from `src/db/index.ts`: application code goes
+ * through `forRun()`, which requires a `runId` (rule 2).
  */
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
@@ -21,16 +21,14 @@ declare global {
   var __larpSql: ReturnType<typeof postgres> | undefined
 }
 
-/** V dev režimu Next.js přebíjí moduly, takže spojení držíme na globalThis. */
+/** Next.js reloads modules in dev, so the connection is kept on globalThis. */
 const sql = globalThis.__larpSql ?? postgres(connectionString(), { max: 5 })
 if (process.env.NODE_ENV !== 'production') globalThis.__larpSql = sql
 
 /**
- * Neomezené spojení bez `runId`. **Používat jen pro migrace, seed, zálohy
- * a import konfigurace do právě zakládaného běhu** — tedy tam, kde běh
- * ještě neexistuje nebo se pracuje přes všechny běhy.
- *
- * Aplikační kód (route handlery, serverové akce) ho nesmí použít; má `forRun()`.
+ * Unscoped connection. Only for migrations, seed, backups and importing config
+ * into a run being created — cases where the run does not exist yet or the work
+ * spans all runs. Application code must use `forRun()` instead.
  */
 export const unscopedDb = drizzle(sql, { schema })
 

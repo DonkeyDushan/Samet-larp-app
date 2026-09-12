@@ -12,16 +12,15 @@ import { rules } from './rules'
 import { chapters, runs } from './runs'
 
 /**
- * Audit log (§2 bod 2, §13). **Append-only** — UPDATE a DELETE na téhle tabulce
- * blokuje databázový trigger, viz `db/sql/001_audit_append_only.sql`.
- * Není to jen konvence; je to vynucené.
+ * Audit log (§2, §13). Append-only, enforced by a database trigger in
+ * `db/sql/001_audit_append_only.sql` — not merely a convention.
  *
- * U každé změny musí být: **kdo** (volné jméno z pole „Kdo jsi?"), **kdy**,
- * **co**, hodnota **před** a **po**, a **které pravidlo** změnu způsobilo.
+ * Every change records who (the free-text name from the identity field), when,
+ * what, the value before and after, and which rule caused it.
  *
- * Zapisuje se sem i to, co není změna dat, ale rozhodnutí orga:
- * ořez škály na hranici, přehození kostky, editace vydané kapitoly s důvodem,
- * rozhodnutí o dotčené kapitole, import nové verze konfigurace.
+ * Org decisions land here too, not just data changes: a scale clamped at a
+ * bound, a re-rolled die, an edit to a released chapter and its reason, a
+ * cascade decision, an import of a new config version.
  */
 export const auditLog = pgTable(
   'audit_log',
@@ -33,26 +32,26 @@ export const auditLog = pgTable(
     chapterId: uuid('chapter_id'),
 
     /**
-     * Co se stalo, v doménových slovech: `odpoved.zmena`, `skala.orez`,
+     * What happened, in domain words: `odpoved.zmena`, `skala.orez`,
      * `kostka.prehozeni`, `kapitola.vydani`, `kapitola.editace_po_vydani`,
      * `kaskada.rozhodnuti`, `konfigurace.import`, `prepocet.potvrzeni`.
-     * Volný text záměrně: enum by se musel měnit s každou novou akcí.
+     * Free text on purpose: an enum would change with every new action.
      */
     action: text('action').notNull(),
-    /** Tabulka nebo doménová entita, které se změna týká. */
+    /** The table or domain entity the change concerns. */
     entityKind: text('entity_kind').notNull(),
     entityId: text('entity_id'),
-    /** Čitelný popis pro člověka, který to bude po hře číst. */
+    /** Readable description for whoever reads this after the game. */
     summary: text('summary'),
 
     valueBefore: jsonb('value_before'),
     valueAfter: jsonb('value_after'),
 
-    /** Pravidlo, které změnu způsobilo — jádro odpovědi na „proč". */
+    /** The rule that caused the change — the core of the "why". */
     ruleId: uuid('rule_id'),
-    /** Verze přepočtu, v rámci které změna vznikla. */
+    /** The computation version the change arose in. */
     computationId: uuid('computation_id'),
-    /** Odůvodnění od orga — povinné u editace vydané kapitoly (§3.2). */
+    /** The org's justification; mandatory when editing a released chapter (§3.2). */
     reason: text('reason'),
 
     createdAt: createdAt(),

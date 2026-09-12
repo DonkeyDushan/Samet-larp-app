@@ -1,9 +1,8 @@
 /**
- * Pustí ruční SQL z `db/sql/` v abecedním pořadí.
+ * Runs the hand-written SQL in `db/sql/` in alphabetical order.
  *
- * Tady žije to, co Drizzle neumí vyjádřit ve schématu — zatím trigger, který
- * dělá z auditu opravdu append-only. Skripty musí být idempotentní, protože
- * se pouští po každé migraci.
+ * That directory holds what Drizzle cannot express in the schema. The scripts
+ * must be idempotent — they run after every migration.
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'

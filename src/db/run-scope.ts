@@ -1,31 +1,27 @@
 /**
- * Přístup k datům běhu (architektonické pravidlo 2).
+ * Access to a run's data (architecture rule 2).
  *
- * Dva běhy hry běží současně a jejich data se nesmí potkat. Izolace nedrží
- * kázní při psaní dotazů, ale **strukturou kódu**: aplikační kód nemá
- * neomezené spojení k dispozici a musí projít přes `forRun(runId)`.
- * Dotaz bez `runId` tady nejde napsat — `select()` i `insert()` si podmínku
- * na `run_id` přidávají samy a `insert()` `run_id` sám dopisuje.
+ * Two runs are played at once and their data must never meet. The isolation
+ * holds through code structure, not discipline: application code has no
+ * unscoped connection and a query without a `runId` cannot be written here —
+ * `select()` and `insert()` add the `run_id` condition themselves.
  *
- * Když je potřeba dotaz, který tahle vrstva neumí (join přes víc tabulek),
- * přidej metodu **sem**, ne obcházení v aplikaci.
+ * A query this layer cannot express (a multi-table join) gets a new method
+ * here, never a bypass in the application.
  */
 import { and, eq, type SQL } from 'drizzle-orm'
 import { type PgColumn, PgTable } from 'drizzle-orm/pg-core'
 import { unscopedDb, type Database } from './client'
 
-/** Tabulka, kterou umí `RunScope` obsloužit: musí mít sloupec `run_id`. */
+/** A table `RunScope` can serve: it must have a `run_id` column. */
 export type RunScopedTable = PgTable & { runId: PgColumn }
 
-/**
- * Identifikátor běhu (`2026-09-12_A`). Značkovaný typ, aby se do funkcí
- * čekajících `RunId` nedal propašovat libovolný string.
- */
+/** Run identifier (`2026-09-12_A`). Branded so any string cannot pass as one. */
 export type RunId = string & { readonly __brand: 'RunId' }
 
 const RUN_ID_PATTERN = /^\d{4}-\d{2}-\d{2}_[A-Z]$/
 
-/** Ověří tvar identifikátoru běhu a udělá z něj `RunId`. */
+/** Validates the run identifier's shape and brands it. */
 export function parseRunId(value: string): RunId {
   if (!RUN_ID_PATTERN.test(value)) {
     throw new Error(`Neplatné ID běhu: ${value}. Očekává se tvar 2026-09-12_A.`)
@@ -33,7 +29,7 @@ export function parseRunId(value: string): RunId {
   return value as RunId
 }
 
-/** Vstupní data pro insert bez `runId` — ten dopisuje `RunScope`. */
+/** Insert payload without `runId`; `RunScope` fills it in. */
 type InsertWithoutRun<T extends RunScopedTable> = Omit<T['$inferInsert'], 'runId'>
 
 export class RunScope {
@@ -42,12 +38,12 @@ export class RunScope {
     private readonly db: Database = unscopedDb,
   ) {}
 
-  /** Podmínka `run_id = ...` pro dotazy, které se skládají ručně. */
+  /** `run_id = ...` for hand-assembled queries. */
   belongsToRun<T extends RunScopedTable>(table: T): SQL {
     return eq(table.runId, this.runId)
   }
 
-  /** Přidá `run_id = ...` k dalším podmínkám. */
+  /** Adds `run_id = ...` to further conditions. */
   scoped<T extends RunScopedTable>(table: T, ...conditions: (SQL | undefined)[]): SQL {
     return and(this.belongsToRun(table), ...conditions) as SQL
   }
@@ -55,9 +51,9 @@ export class RunScope {
   /**
    * `select * from <table> where run_id = ... [and ...]`
    *
-   * Vrací hotový `Promise` s řádky, ne skládací builder — Drizzle svůj typ
-   * `from()` nad generickou tabulkou neposkládá. Když je potřeba `order by`,
-   * `limit` nebo join, **přidej metodu sem**, ne dotaz mimo tuhle vrstvu.
+   * Returns a finished `Promise`, not a chainable builder: Drizzle cannot type
+   * `from()` over a generic table. `order by`, `limit` or joins get their own
+   * method here rather than a query outside this layer.
    */
   select<T extends RunScopedTable>(
     table: T,
@@ -69,22 +65,21 @@ export class RunScope {
       .where(this.scoped(table, ...conditions)) as Promise<T['$inferSelect'][]>
   }
 
-  /** Insert s automaticky doplněným `run_id`. */
+  /** Insert with `run_id` filled in automatically. */
   insert<T extends RunScopedTable>(table: T, values: InsertWithoutRun<T> | InsertWithoutRun<T>[]) {
     const rows = (Array.isArray(values) ? values : [values]).map((row) => ({
       ...row,
       runId: this.runId,
     }))
-    // Generický wrapper nad Drizzle: přesný typ `values()` se z generiky
-    // neposkládá, hodnoty jsou ale odvozené z `$inferInsert` o řádek výš.
+    // `values()` cannot be typed through the generic, but the rows above are
+    // already derived from `$inferInsert`.
     return this.db.insert(table).values(rows as never)
   }
 
   /**
-   * Update omezený na běh. Pozor: většina tabulek se z principu neupdatuje
-   * (pravidlo 3 — nic se nepřepisuje destruktivně). Legitimní případy jsou
-   * stav kapitoly, příznak `dotčená`, přepnutí aktivní verze konfigurace
-   * a editace odpovědi (jejíž historii drží audit).
+   * Run-scoped update. Most tables are never updated by design (rule 3); the
+   * legitimate cases are chapter state, the touched flag, switching the
+   * active config version, and editing an answer (whose history the audit holds).
    */
   update<T extends RunScopedTable>(table: T, ...conditions: (SQL | undefined)[]) {
     return {
@@ -96,14 +91,14 @@ export class RunScope {
     }
   }
 
-  /** Transakce se stejným omezením na běh. */
+  /** Transaction under the same run scope. */
   transaction<R>(fn: (scope: RunScope) => Promise<R>): Promise<R> {
     return this.db.transaction((tx) => fn(new RunScope(this.runId, tx as unknown as Database)))
   }
 }
 
 /**
- * Jediná cesta aplikačního kódu k datům běhu.
+ * The only way application code reaches a run's data.
  *
  * ```ts
  * const run = forRun('2026-09-12_A')
