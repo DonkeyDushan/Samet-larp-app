@@ -1,0 +1,47 @@
+.drawer {
+  flex-shrink: 0;
+  width: 15rem;
+}
+
+/* MUI positions a drawer paper fixed; here it is one column of the run layout. */
+.paper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--mui-palette-background-paper);
+  border-right: 3px solid var(--run-accent);
+}
+
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--mui-spacing) calc(var(--mui-spacing) * 2);
+  background-color: inherit;
+  border-bottom: 1px solid var(--mui-palette-divider);
+}
+
+.muted {
+  color: var(--mui-palette-text-secondary);
+}
+
+.empty {
+  padding: calc(var(--mui-spacing) * 2);
+  color: var(--mui-palette-text-secondary);
+}
+
+@media (max-width: 899.95px) {
+  .drawer {
+    width: auto;
+  }
+
+  .paper {
+    max-height: 30dvh;
+    border-right: 0;
+    border-bottom: 3px solid var(--run-accent);
+  }
+}

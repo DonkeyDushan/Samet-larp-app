@@ -1,0 +1,8 @@
+.section {
+  max-width: 42rem;
+}
+
+.body {
+  margin-top: var(--mui-spacing);
+  color: var(--mui-palette-text-secondary);
+}

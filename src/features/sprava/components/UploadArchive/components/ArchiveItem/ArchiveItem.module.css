@@ -18,6 +18,11 @@
   gap: var(--mui-spacing);
 }
 
+.actions {
+  display: flex;
+  gap: var(--mui-spacing);
+}
+
 .chip {
   margin-left: var(--mui-spacing);
 }

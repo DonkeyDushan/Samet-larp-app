@@ -12,9 +12,11 @@ pravdy**. Architektonická pravidla, která platí v každé session, jsou v
 
 ## Stav projektu
 
-Hotové je datové schéma (27 tabulek, migrace aplikovaná a odzkoušená) a typy
-enginu, včetně domácností a sdílených škál (§4.4). Engine, import `.xlsx` ani rozhraní ještě nestojí — viz harmonogram
-v §15.1 zadání.
+Hotové je datové schéma a typy enginu (§4.4), přihlášení sdíleným heslem
+s polem „Kdo jsi?", založení a přepínání běhů, kostra rozhraní (horní lišta
+s pěti sekcemi, panel postav) a sekce Správa: import `.xlsx` a šablon,
+validace, archiv nahraných souborů. Engine a zadávání odpovědí ještě nestojí —
+viz harmonogram v §15.2 zadání.
 
 ## Co je potřeba mít
 
@@ -88,7 +90,13 @@ src/
 │   ├── client.ts    připojení; jediné místo vázané na poskytovatele Postgresu
 │   ├── run-scope.ts přístup k datům, který vyžaduje runId
 │   └── index.ts     veřejné rozhraní datové vrstvy (bez neomezeného spojení)
-└── app/             Next.js App Router — rozhraní, zatím jen zástupná stránka
+├── import/          čtení .xlsx a šablon, validace, zápis konfigurace
+├── core/            sdílená infrastruktura: routy, přihlášení, běhy v URL
+├── features/        behy, pristup, postavy, sprava — jedna složka na doménu
+├── components/      sdílené UI (horní lišta, dialogy)
+├── theme/           MUI téma, paleta včetně barev běhů
+├── middleware.ts    sdílené heslo před celou aplikací
+└── app/             Next.js App Router: /prihlaseni, /, /beh/[runId]/<sekce>
 
 db/sql/              ruční SQL mimo Drizzle (append-only audit)
 scripts/             seed, správa lokálního Postgresu, pomocné skripty

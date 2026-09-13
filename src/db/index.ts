@@ -7,5 +7,6 @@
  */
 export * as schema from './schema'
 export { forRun, parseRunId, RunScope, type RunId, type RunScopedTable } from './run-scope'
-export { listRuns, type RunSummary } from './runs-catalog'
+export { createRun, findRun, listRuns, renameRun, type NewRun, type RunRename, type RunSummary } from './runs-catalog'
 export { isForeignKeyViolation } from './is-foreign-key-violation'
+export { isUniqueViolation } from './is-unique-violation'

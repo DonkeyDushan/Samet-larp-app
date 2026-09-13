@@ -2,8 +2,10 @@ import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Typography from '@mui/material/Typography'
 import { useCallback } from 'react'
+import { runPath } from '@/core'
 import { APP_LOCALE } from '@/locales/app-locale'
 import { sprava } from '@/locales/cs/sprava'
+import { archiveFilePath } from '../../../../constants/archive-download'
 import { INLINE_SEPARATOR } from '../../../../constants/report-format'
 import type { ArchiveRow } from '../../../../types/archive-row'
 import { extractIssues } from '../../../../utils/extract-issues'
@@ -12,12 +14,13 @@ import { splitIssuesBySeverity } from '../../../../utils/split-issues'
 import styles from './ArchiveItem.module.css'
 
 interface ArchiveItemProps {
+  runId: string
   upload: ArchiveRow
   isExpanded: boolean
   onToggle: (uploadId: string) => void
 }
 
-export const ArchiveItem = ({ upload, isExpanded, onToggle }: ArchiveItemProps) => {
+export const ArchiveItem = ({ runId, upload, isExpanded, onToggle }: ArchiveItemProps) => {
   const handleToggle = useCallback(() => onToggle(upload.id), [onToggle, upload.id])
 
   const isConfig = upload.kind === 'konfigurace'
@@ -55,11 +58,21 @@ export const ArchiveItem = ({ upload, isExpanded, onToggle }: ArchiveItemProps) 
           )}
         </div>
 
-        {isConfig && (
-          <Button variant="outlined" onClick={handleToggle} data-testid={`archive-item--toggle--${upload.id}`}>
-            {isExpanded ? sprava.hideChecks : sprava.showChecks}
+        <div className={styles.actions}>
+          {isConfig && (
+            <Button variant="outlined" onClick={handleToggle} data-testid={`archive-item--toggle--${upload.id}`}>
+              {isExpanded ? sprava.hideChecks : sprava.showChecks}
+            </Button>
+          )}
+          <Button
+            component="a"
+            href={archiveFilePath(runPath(runId), upload.id)}
+            color="inherit"
+            data-testid={`archive-item--download--${upload.id}`}
+          >
+            {sprava.download}
           </Button>
-        )}
+        </div>
       </div>
 
       {isExpanded && (

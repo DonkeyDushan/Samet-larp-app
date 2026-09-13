@@ -1,0 +1,21 @@
+.hint {
+  margin-top: calc(var(--mui-spacing) * 0.5);
+  color: var(--mui-palette-text-secondary);
+}
+
+.tableWrap {
+  margin-top: calc(var(--mui-spacing) * 2);
+  overflow-x: auto;
+}
+
+.row[data-status='archivovan'] {
+  color: var(--mui-palette-text-secondary);
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.actions > * + * {
+  margin-left: var(--mui-spacing);
+}

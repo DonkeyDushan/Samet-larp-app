@@ -4,16 +4,20 @@ import { common } from '@/locales/cs/common'
 import { importReport } from '@/locales/cs/import_report'
 import { CHAPTER_LIST_SEPARATOR } from '../../../../constants/report-format'
 import type { UploadReport } from '../../../../types/upload-report'
+import { useIssueFilter } from '../../../../hooks/useIssueFilter'
 import { buildRepairNotes } from '../../../../utils/build-repair-notes'
 import { splitIssuesBySeverity } from '../../../../utils/split-issues'
 import { Coverage } from './components/Coverage/Coverage'
+import { IssueFilter } from './components/IssueFilter/IssueFilter'
 import { IssueList } from './components/IssueList/IssueList'
 import { Repairs } from './components/Repairs/Repairs'
 import { Stat } from './components/Stat/Stat'
 import styles from './UploadReportView.module.css'
 
 export const UploadReportView = ({ report }: { report: UploadReport }) => {
-  const { errors, warnings } = splitIssuesBySeverity(report.issues)
+  const { values, facets, filtered, handleQuery, handleSheet, handleCode } = useIssueFilter(report.issues)
+
+  const { errors, warnings } = splitIssuesBySeverity(filtered)
   const repairNotes = report.repairs ? buildRepairNotes(report.repairs, report.ignoredSheets ?? []) : []
 
   return (
@@ -62,6 +66,19 @@ export const UploadReportView = ({ report }: { report: UploadReport }) => {
       )}
 
       {repairNotes.length > 0 && <Repairs notes={repairNotes} />}
+
+      {report.issues.length > 0 && (
+        <IssueFilter
+          values={values}
+          sheets={facets.sheets}
+          codes={facets.codes}
+          shown={filtered.length}
+          total={report.issues.length}
+          onQuery={handleQuery}
+          onSheet={handleSheet}
+          onCode={handleCode}
+        />
+      )}
 
       {errors.length > 0 && (
         <IssueList

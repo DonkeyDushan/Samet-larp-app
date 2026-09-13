@@ -3,7 +3,6 @@ export const UPLOAD_FIELDS = Object.freeze({
   runId: 'runId',
   config: 'config',
   templates: 'templates',
-  author: 'author',
   note: 'note',
   reason: 'reason',
 } as const)

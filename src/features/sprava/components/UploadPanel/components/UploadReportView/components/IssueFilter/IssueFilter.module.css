@@ -1,0 +1,14 @@
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 calc(var(--mui-spacing) * 1.5);
+}
+
+.query {
+  flex: 1 1 14rem;
+}
+
+.count {
+  color: var(--mui-palette-text-secondary);
+}

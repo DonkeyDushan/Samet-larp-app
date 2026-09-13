@@ -69,6 +69,15 @@ V UI platí navíc: přepínač běhu trvale v hlavičce na každé obrazovce,
 dialogy u zásadních akcí vždy jmenují běh („Uzamknout kapitolu 2 běhu
 **2026-09-12_B**?"), název běhu je v názvu každého exportu.
 
+**Běh je v cestě URL** (`/beh/<runId>/<sekce>`), ne v cookie: dvě záložky smějí
+držet dva různé běhy a sdílená cookie by jednu z nich tiše přepnula. Písmeno
+běhu začíná s každým datem zahájení znovu od `A`; A/B/C jsou běhy téhož data
+(`nextRunLetter`).
+
+**Jméno z „Kdo jsi?" čte server z cookie** (`readAuthor` v
+`src/core/services/auth-cookies.ts`); formuláře ho neposílají. Middleware
+bez hesla i bez jména nepustí na žádnou stránku, takže audit nikdy není anonymní.
+
 ### 3. Nic se nepřepisuje destruktivně
 
 - Každý přepočet je **nový řádek** v `computations`, nikdy update. Dry-run jde

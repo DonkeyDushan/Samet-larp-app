@@ -1,0 +1,10 @@
+.main {
+  display: grid;
+  place-items: start center;
+  padding: calc(var(--mui-spacing) * 6) calc(var(--mui-spacing) * 2);
+}
+
+.alert {
+  width: 100%;
+  max-width: 36rem;
+}

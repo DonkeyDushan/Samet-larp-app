@@ -1,0 +1,23 @@
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: calc(var(--mui-spacing) * 2) calc(var(--mui-spacing) * 3);
+}
+
+@media (max-width: 899.95px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .main {
+    overflow-y: visible;
+    padding-inline: calc(var(--mui-spacing) * 2);
+  }
+}

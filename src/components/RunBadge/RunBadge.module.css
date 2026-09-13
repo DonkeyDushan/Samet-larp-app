@@ -1,0 +1,30 @@
+.badge {
+  --badge-colour: var(--mui-palette-run-none-accent);
+
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--mui-spacing) * 0.75);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 2px;
+  background-color: var(--badge-colour);
+}
+
+.badge[data-run='A'] {
+  --badge-colour: var(--mui-palette-run-a-accent);
+}
+
+.badge[data-run='B'] {
+  --badge-colour: var(--mui-palette-run-b-accent);
+}
+
+.badge[data-run='other'] {
+  --badge-colour: var(--mui-palette-run-other-accent);
+}

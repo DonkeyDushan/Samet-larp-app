@@ -1,10 +1,13 @@
 .main {
-  max-width: 42rem;
-  margin-inline: auto;
-  padding: calc(var(--mui-spacing) * 6) calc(var(--mui-spacing) * 2);
+  flex: 1;
+  overflow-y: auto;
+  padding: calc(var(--mui-spacing) * 3) calc(var(--mui-spacing) * 2);
 }
 
-.body {
-  margin-top: calc(var(--mui-spacing) * 1.5);
-  color: var(--mui-palette-text-secondary);
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mui-spacing) * 3);
+  max-width: 60rem;
+  margin-inline: auto;
 }

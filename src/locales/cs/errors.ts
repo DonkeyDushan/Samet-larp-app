@@ -5,11 +5,19 @@ const joinLabels = ({ listed, total }: LabelList): string =>
 
 /** Failures reported to the org outside of import validation. */
 export const errors = Object.freeze({
+  passwordNotConfigured: 'Aplikace nemá nastavené heslo (APP_PASSWORD), přihlášení je proto vypnuté.',
+  wrongPassword: 'Heslo nesedí.',
+  authorInvalid: 'Vyplň „Kdo jsi?" — krátké jméno, pod kterým se změny zapisují do auditu.',
+
+  invalidStartDate: 'Datum zahájení musí být platné datum.',
+  labelTooLong: (max: number) => `Popisný název může mít nejvýš ${max} znaků.`,
+  noFreeRunLetter: 'Pro tohle datum už není volné písmeno běhu.',
+  runNotFound: (runId: string) => `Běh ${runId} neexistuje.`,
+
+  somethingFailed: 'Něco se nepovedlo.',
   noConfigFile: 'Nevybral se žádný soubor s konfigurací.',
   unreadableFile: (detail: string) => `Soubor se nepodařilo přečíst: ${detail}`,
-  authorRequiredForImport: 'Vyplň „Kdo jsi?" — každá změna se zapisuje do auditu se jménem.',
-  databaseUnavailable: (detail: string) =>
-    `Databáze zatím neodpovídá (${detail}). Kontrola souboru bez ukládání funguje i tak — ukládání a archiv nahraných souborů potřebují databázi.`,
+  authorRequiredForImport: 'Chybí jméno z „Kdo jsi?" — přihlas se znovu, každá změna se zapisuje do auditu se jménem.',
 
   configHasErrors: 'Konfigurace obsahuje chyby a nedá se uložit. Oprav je v tabulce a nahraj soubor znovu.',
   archiveFailed: 'Nahraný soubor se nepodařilo uložit do archivu běhu.',

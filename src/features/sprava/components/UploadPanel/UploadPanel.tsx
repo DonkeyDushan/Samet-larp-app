@@ -6,8 +6,6 @@ import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useState } from 'react'
-import { AuthorField } from '@/components'
 import { sprava } from '@/locales/cs/sprava'
 import { UPLOAD_ACCEPT, UPLOAD_FIELDS } from '../../constants/upload-fields'
 import { useUploadReport } from '../../hooks/useUploadReport'
@@ -21,7 +19,6 @@ interface UploadPanelProps {
 }
 
 export const UploadPanel = ({ runId, isConfigFrozen }: UploadPanelProps) => {
-  const [author, setAuthor] = useState('')
   const { report, pending, canSave, handleCheck, handleSave } = useUploadReport()
 
   return (
@@ -75,14 +72,6 @@ export const UploadPanel = ({ runId, isConfigFrozen }: UploadPanelProps) => {
             {sprava.templatesHint}
           </Typography>
         </label>
-
-        <AuthorField
-          name={UPLOAD_FIELDS.author}
-          value={author}
-          onChange={setAuthor}
-          hint={sprava.authorHint}
-          testId="upload-form--author"
-        />
 
         {/* Enforced on the server, so checking a file never asks for a reason. */}
         {isConfigFrozen && (

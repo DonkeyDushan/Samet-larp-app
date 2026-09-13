@@ -1,0 +1,32 @@
+.header {
+  flex-shrink: 0;
+  background-color: var(--run-header-bg);
+  color: var(--run-header-fg);
+}
+
+.toolbar {
+  flex-wrap: wrap;
+  gap: var(--mui-spacing) calc(var(--mui-spacing) * 2);
+  padding-block: calc(var(--mui-spacing) * 0.5);
+}
+
+.brand {
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.status {
+  color: inherit;
+  border-color: currentColor;
+}
+
+.status[data-status='archivovan'] {
+  border-style: dashed;
+}
+
+.spacer {
+  flex: 1;
+}

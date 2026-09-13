@@ -1,0 +1,6 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mui-spacing) * 3);
+  max-width: 60rem;
+}

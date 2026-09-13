@@ -1,0 +1,28 @@
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--mui-spacing) * 0.5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  color: inherit;
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* Shape as well as weight, not colour alone (§6.4). */
+.chip[data-status='spocitana'] {
+  border-color: currentColor;
+}
+
+.chip[data-status='vydana'] {
+  font-weight: 600;
+  border-width: 2px;
+  border-color: currentColor;
+}
+
+.chip[data-touched='true'] {
+  border-style: dashed;
+}

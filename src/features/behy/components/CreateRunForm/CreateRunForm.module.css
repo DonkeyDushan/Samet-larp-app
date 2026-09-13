@@ -1,0 +1,29 @@
+.panel {
+  padding: calc(var(--mui-spacing) * 2);
+}
+
+.hint {
+  margin-top: calc(var(--mui-spacing) * 0.5);
+  color: var(--mui-palette-text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mui-spacing);
+  margin-top: var(--mui-spacing);
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 calc(var(--mui-spacing) * 2);
+}
+
+.label {
+  flex: 1 1 16rem;
+}
+
+.submit {
+  align-self: flex-start;
+}

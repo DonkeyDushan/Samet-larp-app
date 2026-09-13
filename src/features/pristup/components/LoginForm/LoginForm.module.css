@@ -1,0 +1,21 @@
+.panel {
+  width: 100%;
+  max-width: 24rem;
+  padding: calc(var(--mui-spacing) * 3);
+  border-top: 4px solid var(--run-accent);
+}
+
+.intro {
+  margin-block: calc(var(--mui-spacing) * 0.5) calc(var(--mui-spacing) * 1.5);
+  color: var(--mui-palette-text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.submit {
+  align-self: flex-start;
+  margin-top: calc(var(--mui-spacing) * 1.5);
+}

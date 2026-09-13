@@ -3,24 +3,38 @@
  * read it through the cascade instead of receiving class names.
  */
 .root {
-  --run-header-bg: #262626;
-  --run-header-fg: #ffffff;
-  --run-accent: #a3a3a3;
+  --run-header-bg: var(--mui-palette-run-none-header);
+  --run-header-fg: var(--mui-palette-run-none-ink);
+  --run-accent: var(--mui-palette-run-none-accent);
 
-  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background-color: var(--mui-palette-background-default);
 }
 
 .root[data-run='A'] {
-  --run-header-bg: #1d4ed8;
-  --run-accent: #2563eb;
+  --run-header-bg: var(--mui-palette-run-a-header);
+  --run-header-fg: var(--mui-palette-run-a-ink);
+  --run-accent: var(--mui-palette-run-a-accent);
 }
 
 .root[data-run='B'] {
-  --run-header-bg: #d97706;
-  --run-accent: #f59e0b;
+  --run-header-bg: var(--mui-palette-run-b-header);
+  --run-header-fg: var(--mui-palette-run-b-ink);
+  --run-accent: var(--mui-palette-run-b-accent);
 }
 
 .root[data-run='other'] {
-  --run-header-bg: #334155;
-  --run-accent: #64748b;
+  --run-header-bg: var(--mui-palette-run-other-header);
+  --run-header-fg: var(--mui-palette-run-other-ink);
+  --run-accent: var(--mui-palette-run-other-accent);
+}
+
+/* MUI `md` breakpoint: below it the page scrolls as a whole. */
+@media (max-width: 899.95px) {
+  .root {
+    height: auto;
+    min-height: 100dvh;
+  }
 }

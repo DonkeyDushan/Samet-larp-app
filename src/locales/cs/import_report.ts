@@ -1,3 +1,5 @@
+import type { IssueCode } from '@/import'
+
 /** The report shown after checking or importing a config (§10.2). */
 export const importReport = Object.freeze({
   usable: '— konfigurace je použitelná',
@@ -36,4 +38,41 @@ export const importReport = Object.freeze({
   templateMissing: 'nenahraná',
   templateUnassigned: 'bez Template ID v tabulce',
   unmatchedTemplates: (filenames: string[]) => `Nahráno, ale nepatří žádné postavě: ${filenames.join(', ')}`,
+
+  filterQuery: 'Hledat',
+  filterQueryPlaceholder: 'ID, buňka nebo slovo z hlášky',
+  filterSheet: 'List',
+  filterCode: 'Druh',
+  filterAll: 'vše',
+  facetOption: (label: string, count: number) => `${label} (${count})`,
+  filterShown: (shown: number, total: number) => (shown === total ? `${total} hlášek` : `zobrazeno ${shown} z ${total}`),
+  issueKinds: Object.freeze({
+    chybejici_list: 'chybějící list',
+    chybejici_sloupec: 'chybějící sloupec',
+    prazdny_list: 'prázdný list',
+    neznama_postava: 'neznámá postava',
+    neznama_skala: 'neznámá škála',
+    neznama_skupina: 'neznámá skupina',
+    neznamy_blok: 'neznámý blok',
+    neznama_odpoved: 'neznámá odpověď',
+    neznamy_priznak: 'neznámý příznak',
+    odpoved_bez_otazky: 'odpověď bez otázky',
+    otazka_bez_odpovedi: 'otázka bez odpovědí',
+    duplicitni_id: 'duplicitní ID',
+    vadny_dopad_na_skalu: 'vadný dopad na škálu',
+    hodnota_mimo_rozsah: 'hodnota mimo rozsah',
+    vadny_vyraz: 'vadná podmínka',
+    vadna_znacka_sablony: 'vadná značka v šabloně',
+    blok_bez_znacky: 'blok bez značky v šabloně',
+    znacka_bez_bloku: 'značka bez bloku',
+    blok_bez_default: 'blok bez DEFAULT',
+    stejna_priorita: 'stejná priorita variant',
+    domacnostni_skala_bez_strategie: 'domácnostní škála bez strategie',
+    postava_bez_sablony: 'postava bez šablony',
+    chybejici_hodnota: 'chybějící hodnota',
+    nedosazitelna_varianta: 'nedosažitelná varianta',
+    skala_bez_dopadu: 'škála bez dopadu',
+    osamely_ucet: 'osamělý účet',
+    nepouzity_priznak: 'nepoužitý příznak',
+  } satisfies Record<IssueCode, string>),
 })

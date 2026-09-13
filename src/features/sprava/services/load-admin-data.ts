@@ -1,18 +1,13 @@
-import { forRun, listRuns, type RunScope, type RunSummary } from '@/db'
+import { forRun, type RunScope } from '@/db'
 import { uploadedFiles } from '@/db/schema'
 import { isConfigFrozen } from '@/import'
-import { errorMessage } from '@/utils/error-message'
 import type { ArchiveRow } from '../types/archive-row'
 
 export interface AdminData {
-  runs: RunSummary[]
-  runId?: string
   /** Newest first. */
   uploads: ArchiveRow[]
   /** The run has a computation, so an upload is an emergency fix (§6.5). */
   isConfigFrozen: boolean
-  /** The database did not answer; checking a file still works without it. */
-  failure?: string
 }
 
 /** Config first within one upload: its templates share the transaction's timestamp. */
@@ -34,23 +29,10 @@ const loadUploads = async (scope: RunScope): Promise<ArchiveRow[]> => {
   return rows.sort(byNewest)
 }
 
-/** Defaults to the first run when none is selected. */
-export const loadAdminData = async (requestedRunId: string | undefined): Promise<AdminData> => {
-  let runs: RunSummary[] = []
-  try {
-    runs = await listRuns()
-  } catch (cause) {
-    return { runs, runId: requestedRunId, uploads: [], isConfigFrozen: false, failure: errorMessage(cause) }
-  }
+/** The run layout has already checked that the run exists. */
+export const loadAdminData = async (runId: string): Promise<AdminData> => {
+  const scope = forRun(runId)
+  const [uploads, frozen] = await Promise.all([loadUploads(scope), isConfigFrozen(scope)])
 
-  const runId = requestedRunId ?? runs[0]?.id
-  if (!runId) return { runs, uploads: [], isConfigFrozen: false }
-
-  try {
-    const scope = forRun(runId)
-
-    return { runs, runId, uploads: await loadUploads(scope), isConfigFrozen: await isConfigFrozen(scope) }
-  } catch (cause) {
-    return { runs, runId, uploads: [], isConfigFrozen: false, failure: errorMessage(cause) }
-  }
+  return { uploads, isConfigFrozen: frozen }
 }

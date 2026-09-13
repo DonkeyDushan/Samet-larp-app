@@ -1,0 +1,30 @@
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--mui-spacing);
+}
+
+.label {
+  opacity: 0.8;
+}
+
+/* The run ID is the one thing on screen that must be read right. */
+.select {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.select,
+.select svg {
+  color: inherit;
+}
+
+.select::before {
+  border-bottom-color: currentColor;
+}
+
+.select option {
+  color: CanvasText;
+  font-weight: 400;
+  background-color: Canvas;
+}

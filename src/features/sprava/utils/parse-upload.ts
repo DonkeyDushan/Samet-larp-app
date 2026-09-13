@@ -1,6 +1,6 @@
 import { importXlsx, readTemplateFiles, type ImportResult, type UploadedFile } from '@/import'
 import { UPLOAD_FIELDS } from '../constants/upload-fields'
-import { readFormFiles } from './read-form-field'
+import { readFormFiles } from '@/utils/read-form-field'
 
 export interface ParsedUpload {
   filename: string

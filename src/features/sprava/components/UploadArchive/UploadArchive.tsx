@@ -14,7 +14,12 @@ import type { ArchiveRow } from '../../types/archive-row'
 import { ArchiveItem } from './components/ArchiveItem/ArchiveItem'
 import styles from './UploadArchive.module.css'
 
-export const UploadArchive = ({ uploads }: { uploads: ArchiveRow[] }) => {
+interface UploadArchiveProps {
+  runId: string
+  uploads: ArchiveRow[]
+}
+
+export const UploadArchive = ({ runId, uploads }: UploadArchiveProps) => {
   const { expandedId, toggle } = useExpandedUpload()
 
   return (
@@ -29,7 +34,7 @@ export const UploadArchive = ({ uploads }: { uploads: ArchiveRow[] }) => {
       {uploads.length > 0 && (
         <Paper variant="outlined" component="ul" className={styles.list}>
           {uploads.map((upload) => (
-            <ArchiveItem key={upload.id} upload={upload} isExpanded={expandedId === upload.id} onToggle={toggle} />
+            <ArchiveItem key={upload.id} runId={runId} upload={upload} isExpanded={expandedId === upload.id} onToggle={toggle} />
           ))}
         </Paper>
       )}

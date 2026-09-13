@@ -1,17 +1,27 @@
-import Typography from '@mui/material/Typography'
-import { common } from '@/locales/cs/common'
+import { AppHeader, RunThemeRoot } from '@/components'
+import { todayIsoDate } from '@/core'
+import { readAuthor } from '@/core/services/auth-cookies'
+import { listRuns } from '@/db'
+import { CreateRunForm, RunList } from '@/features/behy'
 import styles from './page.module.css'
 
-/** Placeholder page; the real layout (§6.4) comes after the engine. */
-const Page = () => (
-  <main className={styles.main}>
-    <Typography variant="h5" component="h1">
-      {common.appTitle}
-    </Typography>
-    <Typography variant="body2" className={styles.body}>
-      {common.placeholderBody}
-    </Typography>
-  </main>
-)
+export const dynamic = 'force-dynamic'
 
-export default Page
+/** After logging in the org picks or creates a run (§3.2). */
+const HomePage = async () => {
+  const [runs, author] = await Promise.all([listRuns(), readAuthor()])
+
+  return (
+    <RunThemeRoot themeKey="none">
+      <AppHeader runs={runs} author={author} />
+      <main className={styles.main}>
+        <div className={styles.content}>
+          <RunList runs={runs} />
+          <CreateRunForm runs={runs} defaultStartDate={todayIsoDate()} />
+        </div>
+      </main>
+    </RunThemeRoot>
+  )
+}
+
+export default HomePage
