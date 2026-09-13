@@ -135,7 +135,7 @@ Zdrojem konfigurace je Google Sheet s tabulkami (per kapitola):
 
 - `1_Questions`, `2_Questions`, `3_Questions` — otázky + odpovědi + jejich dopady na škály
 - `1_Scales`, `2_Scales`, `3_Scales` — definice škál včetně prahů pásem
-- `2_Content`, `3_Content` — textové bloky / šablony
+- `2_Content`, `3_Content` — bloky a jejich varianty; typ `Historie` / `Questions` plyne z ID bloku. **`1_Content` neexistuje** — `N_Content` se počítá z odpovědí kapitoly N−1 (§8.2)
 - `Validations` — kontrolní pravidla
 - **`N_Rules`** _(nepovinný, možná nebude potřeba)_ — pravidla enginu, viz §4.5
 - **`Characters`** _(doplnit do tabulky)_ — minimální registr postav: ID, jméno, příjmení, skupina, ID šablony dokumentu a **počáteční hodnoty škál pro kapitolu 1**. Nic víc.
@@ -146,7 +146,7 @@ Zdrojem konfigurace je Google Sheet s tabulkami (per kapitola):
 
 | Typ     | Vzor                                        | Příklad             |
 | ------- | ------------------------------------------- | ------------------- |
-| Otázka  | `Q_<Postava>_<Kapitola>_<Poradi>`           | `Q_Marie_1_1`       |
+| Otázka  | `Q_<Postava><Kapitola>_<Poradi>`            | `Q_Marie1_1`        |
 | Odpověď | `A_<Postava>_<Kapitola>_<Otazka>_<Hodnota>` | `A_Marie_1_1_Karel` |
 | Škála   | `S_<Postava>_<Skala>`                       | `S_Marie_Wealth`    |
 
@@ -212,7 +212,7 @@ Explicitní zápis s příponou (`S_Marie_Wealth_osobni+3`) zůstává **možný
 
 #### Kdy se rodinný stav vyhodnocuje
 
-Směrování se řídí stavem postavy **po strukturální fázi přepočtu** (§7.3, fáze 3), tedy po vyhodnocení sňatků a rozvodů dané kapitoly.
+Směrování se řídí stavem postavy **po strukturální fázi přepočtu** (§7.3, fáze 4), tedy po vyhodnocení sňatků a rozvodů dané kapitoly.
 
 Prakticky to znamená: **kdo se v téhle kapitole oženil, tomu už příspěvky z téže kapitoly jdou na společný účet.** Kdo se rozvedl, tomu jdou na osobní. Je to logičtější než počítat s loňským stavem a zároveň to plyne z fixního pořadí fází — nemůže to záviset na pořadí řádků v tabulce.
 
@@ -252,7 +252,7 @@ Proto:
 
 ### 4.5 Kde jsou pravidla [ROZHODNUTO]
 
-**Rozhodující zjištění z reálného listu `2_Content`:** autor hry už podmínky píše jako **výrazy v jedné buňce**, například `A_Marie_1_1_Karel AND !(A_Marie_2_3_Postava2 OR A_Marie_2_3_Postava3)`. Dřívější návrh na rozepsání podmínek do strukturovaných sloupců v samostatném listu se tím **ruší** — autor hlasoval tím, jak tabulku píše, a rozepisovat tohle do řádků by bylo výrazně horší na psaní i na čtení.
+**Rozhodující zjištění z reálného listu `2_Content`:** autor hry už podmínky píše jako **výrazy v jedné buňce**, například `A_Marie1_1_Karel AND !(A_Marie_2_3_Postava2 OR A_Marie_2_3_Postava3)`. Dřívější návrh na rozepsání podmínek do strukturovaných sloupců v samostatném listu se tím **ruší** — autor hlasoval tím, jak tabulku píše, a rozepisovat tohle do řádků by bylo výrazně horší na psaní i na čtení.
 
 **Podmínky jsou výrazy. Parser se nepíše, použije se knihovna** (`jsep` nebo `expr-eval`) a nad jejím stromem se napíše vlastní vyhodnocení. Vlastní gramatiku nepsat ani teď.
 
@@ -260,8 +260,8 @@ Proto:
 
 | Prvek   | Zápis                 | Význam                                               |
 | ------- | --------------------- | ---------------------------------------------------- |
-| Odpověď | `A_Marie_1_1_Karel`    | Postava odpověděla takto                             |
-| Negace  | `!A_Marie_1_1_Karel`   | Neodpověděla                                         |
+| Odpověď | `A_Marie1_1_Karel`    | Postava odpověděla takto                             |
+| Negace  | `!A_Marie1_1_Karel`   | Neodpověděla                                         |
 | Spojky  | `AND`, `OR`           | Logické spojení                                      |
 | Závorky | `( )`                 | Priorita vyhodnocení                                 |
 | Škála   | `S_Marie_Wealth >= 7` | Porovnání, operátory `=`, `!=`, `>`, `<`, `>=`, `<=` |
@@ -290,6 +290,93 @@ Důsledky:
 
 - **Vztahy mezi postavami** (§4.1) se **nemodelují jako obecná tabulka.** Strukturně existují jen tři vazby: členství ve skupině, vedení skupiny a domácnost (§4.4). Všechno ostatní je text v šabloně. Kde vztah mechanicky rozhoduje, je stejně zachycený jako odpověď odkazující na ID jiné postavy (§6.6) — a to je ta data.
 - **Vášně, obavy, ambice** (§9) jsou **bloky a proměnné šablony**, ne tabulka. Mění se každou kapitolu tím, že se v šabloně vybere jiný blok. Pokud má některá z nich ovlivnit pozdější kapitolu, vyjádří se navíc příznakem nebo škálou — text sám se do enginu nikdy nevrací.
+
+---
+
+### 4.7 Ankety — vyhodnocení napříč postavami [ROZHODNUTO]
+
+Dosavadní podmínky se ptají vždy jen na **jednu postavu**: „odpověděla Marie takhle?". Volba vedení spolku je jiná otázka — „jak odpověděly všechny postavy dohromady?". Na to jazyk podmínek zatím neměl slovo.
+
+#### Skupina otázek = anketa
+
+Otázky jsou per postava (§6.6), takže volba vedení je ve skutečnosti 23 samostatných otázek. Aby engine věděl, že patří k sobě, dostane `N_Questions` sloupec **`Anketa`**:
+
+| Question ID     | Character | Anketa         | Text                          |
+| --------------- | --------- | -------------- | ----------------------------- |
+| `Q_Marie_1_2`   | Marie     | `VOLBA_VEDENI` | Koho volíte do vedení spolku? |
+| `Q_Karel_1_2`   | Karel     | `VOLBA_VEDENI` | Koho volíte do vedení spolku? |
+| `Q_Vojtech_1_2` | Vojtěch   | `VOLBA_VEDENI` | Koho volíte do vedení spolku? |
+| `Q_Nada_1_2`    | Naďa      | `VOLBA_VEDENI` | Koho volíte do vedení spolku? |
+| `Q_Lubos_1_2`   | Luboš     | `VOLBA_VEDENI` | Koho volíte do vedení spolku? |
+
+**Anketa se nepozná z tvaru ID.** Vyžadovat vzor typu `Q_*_1_2` by znamenalo, že přejmenování otázky tiše rozbije hlasování. Explicitní sloupec je spolehlivější a autor vidí příslušnost na první pohled.
+
+Prázdný sloupec `Anketa` = běžná otázka, vyhodnocuje se jen pro svou postavu.
+
+#### Funkce v jazyce podmínek
+
+| Zápis                        | Vrací | Význam                     |
+| ---------------------------- | ----- | -------------------------- |
+| `VITEZ(VOLBA_VEDENI)`        | ID    | Hodnota s nejvíc hlasy     |
+| `HLASY(VOLBA_VEDENI, Karel)` | číslo | Kolik hlasů dostal Karel   |
+| `HLASY_CELKEM(VOLBA_VEDENI)` | číslo | Kolik hlasů bylo odevzdáno |
+
+Zadaný příklad se pak zapíše takhle:
+
+```
+VITEZ(VOLBA_VEDENI) = Karel
+```
+
+Další použití, která z toho plynou zadarmo:
+
+```
+VITEZ(VOLBA_VEDENI) = Marie AND S_Marie_Control >= 5
+HLASY(VOLBA_VEDENI, Karel) >= 4
+HLASY(VOLBA_VEDENI, Karel) > HLASY(VOLBA_VEDENI, Marie)
+```
+
+Pro víc míst ve vedení existuje **`VITEZOVE(VOLBA_VEDENI, 2)`**, které vrací seznam; porovnání `obsahuje Karel` pak testuje, jestli se do něj vešel.
+
+#### Kdy se anketa vyhodnocuje
+
+**Nová fáze přepočtu, hned po sběru odpovědí** (§7.3). Výsledky anket jsou tedy k dispozici všem dalším fázím — strukturálním efektům, které mění vedení skupiny, i podmínkám variant bloků.
+
+Anketa závisí **jen na odpovědích**, na ničem dalším. Proto jde spočítat jako první a nemůže vzniknout kruhová závislost typu „výsledek volby ovlivní škálu, která ovlivní výsledek volby".
+
+#### Shoda hlasů [ROZHODNUTO]
+
+Dvě hodnoty se stejným nejvyšším počtem hlasů engine **neřeší sám**. Vrátí to jako konflikt a rozhodne org.
+
+Je to stejný mechanismus jako u protichůdných pravidel (§7.3). Tiché rozhodnutí podle abecedy nebo pořadí v tabulce by bylo to nejhorší možné chování: vypadalo by, že všechno funguje, a hru by to zlomilo neviditelně.
+
+Org má dvě možnosti, obě do auditu: **určit vítěze ručně**, nebo **opravit odpověď**, pokud jde o překlep při přepisu.
+
+#### Vedení skupiny jako efekt
+
+Výsledek ankety se propíše do vedení skupiny jako **strukturální efekt** (§7.3, fáze 4):
+
+```
+VEDENI(Spolek, VITEZ(VOLBA_VEDENI))
+```
+
+Změna vedení tak proběhne dřív než hodnotové efekty a podmínky se na ni můžou spolehnout.
+
+#### Trace
+
+Anketa je přesně ten případ, kde je „žádný black box" (§2) nejvíc v ohrožení: Karel se stane vedoucím, aniž by to šlo vysvětlit z jeho vlastních odpovědí.
+
+Trace proto u každé ankety **vždy uvádí celé sčítání**:
+
+> VOLBA_VEDENI — Karel 3 (Marie, Karel, Vojtěch), Marie 2 (Naďa, Luboš) → vítěz **Karel**
+
+Jmenovitý seznam hlasujících je nutný. Bez něj nejde dohledat překlep při přepisu z papíru.
+
+#### Kontroly konzistence
+
+- Anketa, kde některá zúčastněná otázka nemá odpověď — vyhodnocení se nespustí (§6.3).
+- Odpověď v anketě odkazující na neexistující postavu.
+- Podmínka volající `VITEZ` nebo `HLASY` s ID ankety, která v `N_Questions` není.
+- Anketa s jedinou zúčastněnou otázkou — skoro jistě překlep ve sloupci `Anketa`.
 
 ---
 
@@ -436,7 +523,7 @@ Neexistuje sdílená sada otázek. **Každá z 23 postav má vlastní ~3 otázky
 
 Důsledky pro implementaci:
 
-- Otázka je vždy navázaná na konkrétní postavu (viz konvence ID `Q_Marie_1_1`).
+- Otázka je vždy navázaná na konkrétní postavu (viz konvence ID `Q_Marie1_1`).
 - Volby odpovědí často odkazují na **jiné postavy** („Karel", „Mirek"). Musí odkazovat na **ID postavy z registru**, ne na volný text — jinak se po sňatku nebo přejmenování rozpadne provázání (§8.8).
 - Autorský objem je velký a ručně psaný → kontroly konzistence (§11) jsou o to důležitější.
 
@@ -493,6 +580,50 @@ Sběr odpovědí přirozeně probíhá **ve dvou vlnách** — nejdřív přepis
 
 ---
 
+### 6.8 Podmíněné otázky od druhé kapitoly [ROZHODNUTO]
+
+V kapitole 1 dostane každá postava svou pevnou sadu otázek. **Od kapitoly 2 se otázky liší podle toho, jak dopadla kapitola předchozí.**
+
+`N_Questions` má proto pro N ≥ 2 sloupec **`Condition`**:
+
+| Hodnota                   | Význam                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `NONE`                    | Otázka se položí vždy                                                                    |
+| `V_Marie_1_Questions_1_A` | Otázka se položí, **jen když byla vybraná tahle varianta** bloku typu `Questions` (§8.2) |
+
+Ukázka z nástřelu:
+
+| Character | Condition                 | ID            | Text                                    |
+| --------- | ------------------------- | ------------- | --------------------------------------- |
+| Marie     | `NONE`                    | `Q_Marie_2_1` | Kdo by měl vést partu ochránců přírody? |
+| Marie     | `V_Marie_1_Questions_1_A` | `Q_Marie_2_2` | Podaří se Mari sehnat podporu…          |
+| Marie     | `NONE`                    | `Q_Marie_2_3` | Vybrali tě za novou členku…             |
+
+**Podmínka je jedno Variation ID, ne výraz.** Rozhodování se odehrálo už při vyhodnocení bloku, kde jsou k dispozici plné výrazy včetně `AND`, `OR` a `RANDOM` (§4.5). Tady stačí odkaz na výsledek. Kdyby podmínka byla druhý výraz, tatáž logika by existovala na dvou místech a rozcházela by se.
+
+#### Jak to funguje dohromady
+
+1. Blok typu `Questions` v `N_Content` vybere podle svých podmínek právě jednu variantu.
+2. Otázky v `N_Questions`, které se na tu variantu odkazují, se položí. Ostatní ne.
+3. Protože z bloku vyhrává vždy **právě jedna** varianta, jsou otázky navázané na různé varianty téhož bloku **vzájemně vylučující**. Přepínání větví dotazníku je tím vyřešené bez jediného pravidla navíc.
+
+Postava tak může dostat v kapitole 2 úplně jinou sadu otázek než její kolega, podle toho, kam se její příběh stočil.
+
+#### Není to totéž co podotázky
+
+§6.1 zakazuje **podmíněné podotázky uvnitř jednoho dotazníku** („pokud X, zobraz Y"). To platí dál — dotazník, který hráč dostane do ruky, je plochý.
+
+Tohle je něco jiného: celá sada otázek pro **příští** kapitolu se sestaví předem, mezi kapitolami, na základě už uzavřených odpovědí. Hráč dostane hotový plochý papír.
+
+#### Kontroly konzistence
+
+- `Condition` odkazující na Variation ID, které v `N_Content` neexistuje.
+- `Condition` odkazující na variantu bloku typu `Historie` — ten se na výběr otázek nepoužívá.
+- Varianta bloku typu `Questions`, na kterou se neodkazuje žádná otázka — buď zbytečná, nebo překlep.
+- **Postava, která by v kapitole nedostala ani jednu otázku.** Skoro jistě chyba v podmínkách.
+
+---
+
 ## 7. Engine pravidel („střeva")
 
 ### 7.1 Sémantika pravidla
@@ -519,7 +650,7 @@ Faktory mají různou váhu. Váha je číslo u pravidla nebo u dopadu odpovědi
 ### 7.3 Konflikty, negace, priority [ROZHODNUTO]
 
 - **Negace / vyloučení:** musí jít zapsat pravidlo typu _„pokud nastalo E a zároveň F, pak D nikdy nenastane"_. Vyloučení má vždy přednost před přiřazením.
-- **Priorita:** každé pravidlo má prioritu. Při dvou protichůdných výsledcích vyhrává pravidlo s vyšší prioritou.
+- **Priorita:** každé pravidlo má prioritu. **Nižší číslo je silnější** a při protichůdných výsledcích vyhrává (§7.6). Přímé dopady odpovědi mají prioritu 0, tedy nejsilnější.
 - Pokud dvě pravidla se **stejnou** prioritou dají protichůdný výsledek, engine to **nevyřeší sám** — vyhodí to jako konflikt do UI a nechá rozhodnout orga.
 
 #### Efekty cílící na dvojici
@@ -537,13 +668,15 @@ Oboustranné potvrzení s hlášením nesouladu tím **odpadá** — nesoulad ne
 #### Pořadí vyhodnocení (fixní)
 
 1. Sběr všech odpovědí
-2. Aplikace vyloučení (negací)
-3. **Strukturální efekty** — vznik a zánik domácností, sňatky, změny členství a vedení skupin. Podle priority sestupně.
-4. **Hodnotové efekty** — nejprve absolutní nastavení hodnot z organizátorských otázek (§6.7), pak změny škál a příznaků podle priority sestupně. **U směrovaných škál se tady rozhoduje cílový účet podle rodinného stavu z fáze 3** (§4.4). U škál s rozsahem `domácnost` se efekty členů sčítají, pokud pravidlo nenese příznak „aplikovat jednou za domácnost“ (§4.4).
-5. Vyhodnocení pásem na škálách
-6. Detekce a nahlášení zbylých konfliktů
+2. **Vyhodnocení anket** — sčítání hlasů napříč postavami, výsledky jsou dál k dispozici všem fázím (§4.7)
+3. Aplikace vyloučení (negací)
+4. **Strukturální efekty** — vznik a zánik domácností, sňatky, změny členství a vedení skupin. Podle priority sestupně.
+5. **Hodnotové efekty** — nejprve absolutní nastavení hodnot z organizátorských otázek (§6.7), pak změny škál a příznaků podle priority sestupně. **U směrovaných škál se tady rozhoduje cílový účet podle rodinného stavu z fáze 4** (§4.4). U škál s rozsahem `domácnost` se efekty členů sčítají, pokud pravidlo nenese příznak „aplikovat jednou za domácnost“ (§4.4).
+6. Vyhodnocení pásem na škálách
+7. **Výběr variant bloků** — u typu `Historie` text do dokumentu, u typu `Questions` výběr otázek pro další kapitolu (§8.2, §6.8)
+8. Detekce a nahlášení zbylých konfliktů
 
-**Fáze 3 musí proběhnout celá před fází 4.** Sdílená škála potřebuje vědět, kdo do domácnosti patří, dřív než se do ní začnou sčítat příspěvky. Kdyby se sňatek vyhodnotil až mezi změnami škál, výsledek by závisel na pořadí pravidel — a to je přesně ten nedeterminismus, kterému se vyhýbáme.
+**Fáze 4 musí proběhnout celá před fází 5.** Sdílená škála potřebuje vědět, kdo do domácnosti patří, dřív než se do ní začnou sčítat příspěvky. Kdyby se sňatek vyhodnotil až mezi změnami škál, výsledek by závisel na pořadí pravidel — a to je přesně ten nedeterminismus, kterému se vyhýbáme.
 
 ### 7.4 Náhoda [ROZHODNUTO]
 
@@ -562,7 +695,101 @@ Tím je dohledatelnost splněná bez jakéhokoli seedování — v datech prost�
 
 Logika algoritmu musí být **human-readable**. Pravidla se v UI zobrazují v přirozeném jazyce, ne jako kód. Např.:
 
-> _„Protože Marie odpověděla ‚Karel' na Q_Marie_1_1 (+3 Wealth) a je členkou Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."_
+> _„Protože Marie odpověděla ‚Karel' na Q_Marie1_1 (+3 Wealth) a je členkou Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."_
+
+---
+
+### 7.6 Rozhodnutí k vyhodnocování [ROZHODNUTO]
+
+Odpovědi na otázky, které vyplynuly z první implementace enginu.
+
+#### Směrované účty platí
+
+`S_Marie_Wealth` **bez přípony je platný zápis** a engine ho směruje podle rodinného stavu (§4.4). `CLAUDE.md` a schéma vzniklé před touto změnou jsou zastaralé a je třeba je srovnat, ne naopak.
+
+#### Priorita: nižší číslo je silnější [ROZHODNUTO]
+
+Sjednocení napříč dokumentem — dřív se to lišilo mezi pravidly a variantami bloků.
+
+| Priorita | Co                                            |
+| -------- | --------------------------------------------- |
+| `0`      | **Přímé dopady odpovědi.** Nejsilnější.       |
+| `1`…     | Pravidla, explicitně zapsaná                  |
+| `100`    | Výchozí priorita pravidla bez uvedené hodnoty |
+
+**Odpověď tedy pravidlo nepřebije.** Odpověď je fakt, který zadal člověk; pravidlo je odvozenina. Kde má odvozenina fakt potlačit, zapíše se jako **vyloučení** (negace), které má absolutní přednost (§7.3). Konflikt mezi odpovědí a pravidlem tím nevzniká.
+
+U variant bloků platí totéž: nižší `Priority` se vyhodnocuje dřív a vyhrává.
+
+#### Kdy se čtou podmínky [ROZHODNUTO]
+
+- **Podmínky pravidel** se vyhodnocují nad **stavem na začátku kapitoly** a nad odpověďmi.
+- **Podmínky variant bloků** se vyhodnocují nad **hotovým stavem po fázi 6**.
+
+Plyne to z pořadí fází (§7.3) a je to nutné: `S_Marie_Wealth_spolecny >= 7` musí vidět hodnotu, kterou org nastavil v téže kapitole. Kdyby varianty četly stav ze začátku kapitoly, popisovaly by loňský svět.
+
+#### Co je protichůdný efekt [ROZHODNUTO]
+
+| Typ efektu          | Protichůdné je                        |
+| ------------------- | ------------------------------------- |
+| Příznak             | `true` proti `false`                  |
+| Absolutní nastavení | dvě různé hodnoty na tutéž škálu      |
+| Domácnost           | dva sňatky, nebo sňatek proti rozvodu |
+| Vedení skupiny      | dva různí vedoucí                     |
+| **Posun škály**     | **nikdy** — posuny se sčítají         |
+
+**Ořez na hranice 1–10 se dělá jednou, až po sečtení všech posunů.** Jinak by výsledek závisel na pořadí, ve kterém se posuny aplikovaly.
+
+#### Nedopočítané hodnoty [ROZHODNUTO]
+
+Když strategie sloučení nebo rozdělení nechá hodnotu otevřenou — je nastavená na `otazka`, nebo vyjde neceločíselný průměr — a žádná odpověď ji nenastaví, engine vrátí konflikt **`nedopocitano`**.
+
+**Engine hodnotu nikdy nedopočítá sám.** Je to totéž pravidlo jako všude jinde: kde není jasno, rozhoduje člověk.
+
+#### Sňatek do obsazené domácnosti [ROZHODNUTO]
+
+Když má být uzavřen sňatek s postavou, která už v domácnosti je, engine vrátí **strukturální konflikt** a nic nemění. Org buď opraví odpověď, nebo nejdřív zadá rozvod.
+
+#### `RANDOM(p)` [ROZHODNUTO]
+
+- Význam: hod 1–100, podmínka platí při hodnotě **≤ p**. `RANDOM(50)` je tedy padesát procent.
+- **Každý výskyt `RANDOM` ve výrazu má vlastní hod.** Klíč je `(postava, kapitola, varianta nebo pravidlo, pořadí výskytu ve výrazu)`.
+- Sdílení jednoho hodu mezi víc výskytů bylo zvažováno a zamítnuto: `RANDOM(50) AND RANDOM(50)` musí dávat 25 %, ne 50 %. Autor hry počítá s nezávislými hody a index výskytu je levný.
+- Hod se ukládá a přepočet ho neopakuje (§7.4).
+
+#### Vokabulář efektů [ROZHODNUTO]
+
+Efekt v `Effects` je funkce s argumenty. Jiné než tyhle neexistují:
+
+| Zápis                          | Význam                                    |
+| ------------------------------ | ----------------------------------------- |
+| `SNATEK(<postava>)`            | Vznik domácnosti s uvedenou postavou      |
+| `ROZVOD()`                     | Zánik domácnosti, které je postava členem |
+| `VEDENI(<skupina>, <postava>)` | Uvedená postava se stává vedoucím skupiny |
+| `CLENSTVI(<skupina>)`          | Postava vstupuje do skupiny               |
+| `KONEC_CLENSTVI(<skupina>)`    | Postava skupinu opouští                   |
+| `PRIJMENI(<text>)`             | Změna příjmení postavy (§8.8)             |
+
+**Skupina je povinný argument** u `VEDENI` i `CLENSTVI` a import ji musí uložit. `ODCHOD` bez argumentu se ruší — nahrazuje ho `KONEC_CLENSTVI`.
+
+#### Sloupec `Blocks` u odpovědi se ruší [ROZHODNUTO]
+
+Původně měl zapínat bloky. V modelu §8.2 se ale **vyhodnocuje vždy každý blok** a o výsledku rozhodují podmínky jeho variant. Sloupec by tedy neměl žádný účinek.
+
+U odpovědi zůstávají `Scale Impact`, `Flags` a `Effects`.
+
+#### Změna příjmení po sňatku [ROZHODNUTO]
+
+V prostředí hry si příjmení bere jen někdo, takže **se nemění automaticky**.
+
+- Vlastní příjmení se změní jen efektem `PRIJMENI(<text>)`, typicky z organizátorské otázky.
+- Proměnná **`{PRIJMENI_PARTNER}`** se odvozuje z domácnosti: je to příjmení druhého člena. Mimo domácnost se vyhodnotí jako chyba, ne jako prázdný řetězec.
+
+#### ID domácnosti [ROZHODNUTO]
+
+ID **nesmí kódovat jména členů.** `H_2_Marie_Mirek` přestane sedět v okamžiku rozvodu nebo úmrtí a stane se z něj matoucí nálepka.
+
+Použij neprůhledné ID (`H_<běh>_<pořadí>`) a členy drž ve vazební tabulce. Čitelný popis („domácnost Marie a Mirka") se skládá až při zobrazení, z aktuálního členství.
 
 ---
 
@@ -576,23 +803,68 @@ Aplikace **negeneruje PDF ani nefinalizuje sazbu**. Cílové dokumenty žijí ja
 
 ### 8.2 Bloky a jejich varianty [ROZHODNUTO]
 
-**Upraveno podle reálného listu `2_Content`.** Původní návrh počítal s tím, že všechny varianty textu jsou přímo v šabloně a nevybrané se mažou. Autor hry to ale píše jinak a lépe: **varianty textu žijí v tabulce**, šablona obsahuje jen značku.
+Varianty textu žijí v tabulce, šablona obsahuje jen značku. Struktura listu `N_Content`:
 
-Struktura listu `N_Content`:
+| Sloupec                 | Význam                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| `Character`             | Které postavy se blok týká. Vyplněno jen na prvním řádku skupiny.                           |
+| `Block ID`              | Identifikátor bloku, `B_<Postava>_<Kapitola>_<Typ>_<Pořadí>`. Vyplněno jen na prvním řádku. |
+| `Variation ID`          | Identifikátor varianty                                                                      |
+| `Variation Description` | Poznámka autora, do výstupu nejde                                                           |
+| `Variation Text`        | Text vkládaný do dokumentu. U typu `Questions` zůstává prázdný.                             |
+| `Priority`              | Pořadí vyhodnocení, nižší číslo dřív                                                        |
+| `Conditions`            | Výraz, §4.5                                                                                 |
 
-| Sloupec                 | Význam                                                                           |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `Character`             | Které postavy se blok týká. Vyplněno jen na prvním řádku skupiny.                |
-| `Block ID`              | Identifikátor bloku, např. `B_Marie_1_Historie_1`. Vyplněno jen na prvním řádku. |
-| `Variation ID`          | Identifikátor varianty, např. `V_Marie_1_Historie_1_A`                           |
-| `Variation Description` | Poznámka autora, do výstupu nejde                                                |
-| `Variation Text`        | Text, který se vloží do dokumentu. Smí být prázdný — varianta „nic se nestalo".  |
-| `Priority`              | Pořadí vyhodnocení, nižší číslo dřív                                             |
-| `Conditions`            | Výraz, §4.5                                                                      |
+**Vyhodnocení bloku:** varianty se procházejí **vzestupně podle `Priority`** a použije se **první, jejíž podmínka platí**. Varianta s podmínkou `DEFAULT` je vždy pravdivá, stojí poslední a zaručuje, že blok vždy něco vrátí. Mezi variantami proto **nevznikají konflikty** a engine nemusí nic hlásit orgovi.
 
-**Vyhodnocení bloku:** varianty se procházejí **vzestupně podle `Priority`** a použije se **první, jejíž podmínka platí**. Varianta s podmínkou `DEFAULT` je vždy pravdivá, takže stojí poslední a zaručuje, že blok vždy něco vrátí.
+#### Dva typy bloků [ROZHODNUTO]
 
-Z toho plyne: **žádné konflikty mezi variantami nevznikají.** Priorita je rozhoduje úplně, engine nemusí nic hlásit orgovi.
+| Typ         | Co vybraná varianta dělá                                                             |
+| ----------- | ------------------------------------------------------------------------------------ |
+| `Historie`  | Její `Variation Text` se vloží do dokumentu na místo značky `{BLOK <Block ID>}`      |
+| `Questions` | Funguje jako **přepínač**: rozhoduje, které otázky se v další kapitole položí (§6.8) |
+
+**Jiné typy nejsou.** Blok je buď kus textu do dokumentu, nebo rozcestník pro příští dotazník.
+
+U typu `Questions` je `Variation Text` **prázdný** — varianta nenese text, je to jen značka, na kterou se odkazují otázky. Text otázek žije v `N_Questions`, ne tady.
+
+#### Typ se odvozuje z ID bloku [ROZHODNUTO]
+
+Samostatný sloupec `Type` není potřeba. ID bloku má pevný tvar:
+
+```
+B_<Postava>_<Kapitola>_<Typ>_<Pořadí>
+
+B_Marie_1_Historie_1    → typ Historie
+B_Marie_1_Questions_2   → typ Questions
+```
+
+Typ nese **předposlední segment**. Parser ho přečte a namapuje na `Historie` nebo `Questions`.
+
+`<Kapitola>` je kapitola, **ze které se blok odvozuje**, ne číslo listu — viz níže.
+
+Protože na tvaru ID teď závisí chování, **musí být hlídaný validací**, ne dohadovaný:
+
+- ID, které tvaru neodpovídá, je **chyba importu**.
+- Neznámý typ v předposledním segmentu je **chyba importu**, ne tiché zařazení mezi `Historie`.
+- Chyba se hlásí s návrhem: „`B_Marie_1_Historei_1` — neznámý typ `Historei`, mysleli jste `Historie`?"
+
+Bez těchhle dvou kontrol by překlep v názvu tiše změnil chování bloku a poznalo by se to až z vytištěných materiálů.
+
+#### Kdy se `N_Content` počítá [ROZHODNUTO]
+
+**List `N_Content` obsahuje materiál pro kapitolu N, ale počítá se z odpovědí kapitoly N−1.**
+
+Proto v konfiguraci **žádný `1_Content` není** — do první kapitoly se nic nepočítá, hráči do ní vstupují s materiály připravenými ručně.
+
+```
+odpovědi kapitoly 1  →  vyhodnocení 2_Content  →  ┬→  texty do dokumentů pro kapitolu 2
+                                                  └→  výběr otázek v 2_Questions
+```
+
+Pořadí je tím dané a kruhová závislost nemůže vzniknout: bloky se vyhodnotí z toho, co už je zodpovězené, a teprve pak se z nich odvodí, na co se bude ptát dál.
+
+**Číslo kapitoly v ID bloku a varianty je kapitola, ze které se odvozují.** Bloky a varianty v listu `2_Content` mají v ID `1` (`B_Marie_1_Historie_1`, `V_Marie_1_Questions_1_A`), v `3_Content` mají `2`. Totéž platí pro Variation ID ve sloupci `Condition` otázek (§6.8): `2_Questions` odkazuje na `V_Marie_1_…`.
 
 ### 8.3 Naplnění dokumentu [ROZHODNUTO]
 
@@ -671,7 +943,7 @@ Sňatek mění příjmení. Jméno postavy proto **nesmí být natvrdo v textech
 
 ## 9. Šablona postavy
 
-- **Vztahy** — modelovány hlavně v kapitole 1; v kapitolách 2–3 jen pro speciální události.
+- **Vztahy** — nejsou datový model (§4.6). Struktura drží jen členství ve skupině, vedení skupiny a domácnost; zbytek je text v šabloně.
 - **Odstavce** — část napevno, část podle voleb (podmíněné bloky).
 - **Vášně, obavy, ambice** — mění se **vždy** v každé kapitole. Jde o destilaci životní situace postavy a toho, co chce. Zadané už v kapitole 1, dál se přepočítávají.
 - **Natvrdo zadané rysy** (např. „jsi závislý na piku") — jsou součástí **pevného textu šablony**, ne datového modelu. Engine o nich neví a nemůže je přepsat.
@@ -774,6 +1046,13 @@ Sada automatických kontrol (list `Validations`), spuštitelná kdykoli:
 7. Postava ve více domácnostech zároveň, nebo cílem více než jednoho sňatku v kapitole (§6.7)
 8. Domácnostní škála bez definované strategie sloučení a rozdělení (§4.4)
 9. Žádná odpověď v kapitole nesahá na jeden z dvojice účtů `_osobni` / `_spolecny` — skoro jistě překlep v ID škály (§4.4)
+10. Absolutní nastavení (`scale_direct`) používající směrované jméno škály bez přípony (§4.4)
+11. Podmínka volající `VITEZ` nebo `HLASY` s ID ankety, která v `N_Questions` neexistuje; anketa s jedinou zúčastněnou otázkou (§4.7)
+12. ID bloku neodpovídající tvaru `B_<Postava>_<Kapitola>_<Typ>_<Pořadí>`, nebo neznámý typ v předposledním segmentu; blok typu `Questions` s vyplněným `Variation Text` (§8.2)
+13. `Condition` u otázky odkazující na neexistující Variation ID, nebo na variantu bloku typu `Historie` (§6.8)
+14. Varianta bloku typu `Questions`, na kterou se neodkazuje žádná otázka (§6.8)
+15. **Postava, která by v kapitole nedostala ani jednu otázku** (§6.8)
+16. Značka `{BLOK}` v šabloně odkazující na blok typu `Questions` — ten se do dokumentů nevkládá
 
 ---
 
@@ -847,7 +1126,7 @@ evaluate(stav, odpovědi, pravidla) → { novýStav, trace[] }
 
 Díky tomu jde otestovat na desítkách scénářů bez rozjetí aplikace a `trace[]` je rovnou podklad pro vysvětlení „proč" (§7.5). Kdyby engine sahal do databáze, ztratíš obojí.
 
-**Podmínky pravidel — nepiš parser.** Začni **strukturovanými sloupci** v tabulce (`subjekt | operátor | hodnota | spojka | skupina`), ne textovými výrazy typu `S_X > 5 AND flag_Y`. Vyhneš se psaní vlastního jazyka. Pokud se to autorovi ukáže jako neúnosně kostrbaté, teprve pak přidej malou knihovnu na výrazy (`expr-eval`). Vlastní parser nepiš nikdy.
+**Podmínky jsou výrazy v jedné buňce** (§4.5), protože tak je autorka už píše. **Parser ale nepiš** — použij `jsep` nebo `expr-eval` a nad jejich stromem napiš vlastní vyhodnocení. Vlastní gramatiku nepiš nikdy.
 
 **Nasazení:** propojené GitHub repo, `git push` = nasazeno (§18.1). Lokálně `npm run dev`.
 
@@ -912,25 +1191,25 @@ Pravidla uplatňuj **globálně, ne jen v kritických místech.** Určovat u ka�
 
 ## 16. Zodpovězeno
 
-| #   | Otázka                    | Odpověď                                                                                                 |
-| --- | ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1   | Kdo zadává odpovědi?      | Vždy orgové. Jediná role, žádné hráčské účty.                                                           |
-| 2   | Vztah ke Google Workspace | **V1 žádný.** Komunikace přes soubory: `.xlsx` dovnitř, `.md` ven. Napojení až fáze 2 (§10.1).          |
-| 3   | Offline provoz            | Vyřešeno tím, že v1 nemá síťové závislosti. Při výpadku se píše na papír.                               |
-| 4   | Rozsah                    | 23 postav, 7 skupin, ~3 otázky na postavu a kapitolu.                                                   |
-| 5   | Výchozí hodnoty odpovědí  | Neexistují, vše se zadává ručně.                                                                        |
-| 6   | Škály                     | Celá čísla 1–10, clamp, 4 pásma (1–3 / 4–5 / 6–8 / 9–10) editovatelná v `N_Scales`.                     |
-| 7   | Otázky                    | Každá postava má vlastní otázky, žádná sdílená sada.                                                    |
-| 8   | Počáteční stav postav     | V tabulce, list `Characters`. Nic dalšího se o postavách nemodeluje.                                    |
-| 11  | PDF                       | Negeneruje se, tisk je v Google Docs.                                                                   |
-| 12  | Značky v šabloně          | Párové `{BLOK <ID>}`…`{/BLOK}` a `{PROMENNA}`. Nevybrané bloky se **mažou**, nic se nevkládá.           |
-| 14  | Round-trip přes Markdown  | **Otestováno, formátování se zachovalo.** Postup §8.3 platí.                                            |
-| 13  | Google disk               | **Sdílený disk (Shared Drive)** → ve fázi 2 autentizace přes service account, žádný OAuth.              |
-| 15  | Nasazení                  | Server od začátku (cloud, §18.1), aby bylo kam ve fázi 2 přidat Google. Varianta bez serveru zamítnuta. |
-| 16  | Přihlášení a běhy         | Sdílené heslo + pole „Kdo jsi?". Běh = `2026-09-12_A`, viz §3.1–3.3.                                    |
-| 17  | Uzamykání kapitol         | **Nikdy nevratné.** Měkká pojistka s odůvodněním, následující kapitoly se značí jako dotčené (§3.2).    |
-| 9   | Deadline                  | ~3 měsíce.                                                                                              |
-| 10  | Vývoj a údržba            | Jeden vývojář v týmu, React, ochoten se doučit. Stack viz §15.                                          |
+| #   | Otázka                    | Odpověď                                                                                                  |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 1   | Kdo zadává odpovědi?      | Vždy orgové. Jediná role, žádné hráčské účty.                                                            |
+| 2   | Vztah ke Google Workspace | **V1 žádný.** Komunikace přes soubory: `.xlsx` dovnitř, `.md` ven. Napojení až fáze 2 (§10.1).           |
+| 3   | Offline provoz            | Vyřešeno tím, že v1 nemá síťové závislosti. Při výpadku se píše na papír.                                |
+| 4   | Rozsah                    | 23 postav, 7 skupin, ~3 otázky na postavu a kapitolu.                                                    |
+| 5   | Výchozí hodnoty odpovědí  | Neexistují, vše se zadává ručně.                                                                         |
+| 6   | Škály                     | Celá čísla 1–10, clamp, 4 pásma (1–3 / 4–5 / 6–8 / 9–10) editovatelná v `N_Scales`.                      |
+| 7   | Otázky                    | Každá postava má vlastní otázky, žádná sdílená sada.                                                     |
+| 8   | Počáteční stav postav     | V tabulce, list `Characters`. Nic dalšího se o postavách nemodeluje.                                     |
+| 11  | PDF                       | Negeneruje se, tisk je v Google Docs.                                                                    |
+| 12  | Značky v šabloně          | Nepárové `{BLOK <ID>}` a `{PROMENNA}`. Text variant žije v `N_Content`, do šablony se **vkládá** (§8.2). |
+| 14  | Round-trip přes Markdown  | **Otestováno, formátování se zachovalo.** Postup §8.3 platí.                                             |
+| 13  | Google disk               | **Sdílený disk (Shared Drive)** → ve fázi 2 autentizace přes service account, žádný OAuth.               |
+| 15  | Nasazení                  | Server od začátku (cloud, §18.1), aby bylo kam ve fázi 2 přidat Google. Varianta bez serveru zamítnuta.  |
+| 16  | Přihlášení a běhy         | Sdílené heslo + pole „Kdo jsi?". Běh = `2026-09-12_A`, viz §3.1–3.3.                                     |
+| 17  | Uzamykání kapitol         | **Nikdy nevratné.** Měkká pojistka s odůvodněním, následující kapitoly se značí jako dotčené (§3.2).     |
+| 9   | Deadline                  | ~3 měsíce.                                                                                               |
+| 10  | Vývoj a údržba            | Jeden vývojář v týmu, React, ochoten se doučit. Stack viz §15.                                           |
 
 ## 17. [OTEVŘENÉ] Zbývá doplnit
 
@@ -939,7 +1218,6 @@ Nic blokujícího. Během implementace bude potřeba doladit:
 1. Přesné znění a strukturu listu `Characters` (zatím v tabulce neexistuje).
 2. Názvy pásem pro každou škálu zvlášť (prahy jsou dané, popisky ne).
 3. Konkrétní podobu šablon dokumentů — vzniknou při psaní obsahu kapitol.
-   Nic blokujícího nezbývá. Zadání je připravené k implementaci.
 
 ---
 
