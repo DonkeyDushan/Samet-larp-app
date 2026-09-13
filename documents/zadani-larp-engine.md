@@ -146,7 +146,7 @@ Zdrojem konfigurace je Google Sheet s tabulkami (per kapitola):
 
 | Typ     | Vzor                                        | Příklad             |
 | ------- | ------------------------------------------- | ------------------- |
-| Otázka  | `Q_<Postava><Kapitola>_<Poradi>`            | `Q_Marie1_1`        |
+| Otázka  | `Q_<Postava>_<Kapitola>_<Poradi>`           | `Q_Marie_1_1`       |
 | Odpověď | `A_<Postava>_<Kapitola>_<Otazka>_<Hodnota>` | `A_Marie_1_1_Karel` |
 | Škála   | `S_<Postava>_<Skala>`                       | `S_Marie_Wealth`    |
 
@@ -167,69 +167,92 @@ Některé postavy sdílejí majetek — manželé mají společný účet. Sdíl
 
 **Zavádí se entita `Domácnost` (Household).** Je to skupina postav, které sdílejí ekonomické hodnoty. Vzniká sňatkem, může zaniknout rozvodem nebo úmrtím.
 
-**Škála má v definici (`N_Scales`) uvedený rozsah platnosti:**
-
-| Rozsah      | Význam                                                      | Příklad                             |
-| ----------- | ----------------------------------------------------------- | ----------------------------------- |
-| `postava`   | Hodnota patří jedné postavě                                 | `Regime`, `Control`                 |
-| `domácnost` | Hodnota patří domácnosti, všichni členové čtou a mění tutéž | `Wealth`, `Bony`, firemní byt, auto |
-
-Postava bez domácnosti (svobodná) drží hodnotu domácnostní škály sama — technicky je to domácnost o jednom členovi. Tím odpadá zvláštní větev v kódu.
-
 **Postava smí být v jednu chvíli nejvýše v jedné domácnosti.** Kontrola konzistence (§11).
+
+#### Tři rozsahy platnosti škály
+
+Škála má v definici (`N_Scales`) uvedený rozsah:
+
+| Rozsah      | Význam                                                              | Příklad             |
+| ----------- | ------------------------------------------------------------------- | ------------------- |
+| `postava`   | Hodnota patří jedné postavě                                         | `Regime`, `Control` |
+| `domácnost` | Hodnota patří domácnosti, všichni členové čtou a mění tutéž         | firemní byt, auto   |
+| `směrovaná` | **Dvojice účtů, engine podle stavu postavy vybere, do kterého jde** | `Wealth`, `Bony`    |
+
+Směrovaná škála existuje ve dvou hodnotách zároveň:
+
+| Hodnota           | Vlastník  | Kdy se do ní zapisuje                                  |
+| ----------------- | --------- | ------------------------------------------------------ |
+| `Wealth_osobni`   | postava   | Postava je svobodná, nebo má otázka příznak `Soukrome` |
+| `Wealth_spolecny` | domácnost | Postava je v manželství                                |
+
+**Osobní účet manželům nezaniká.** Sňatkem se jen změní, kam standardně přitékají peníze; to, co měli předtím, jim zůstává na osobním účtu.
+
+#### Směrování finančních příspěvků [ROZHODNUTO]
+
+Tohle je jádro celé sekce:
+
+- **Postava v manželství** → její finanční příspěvky jdou **do domácnosti**, na společný účet.
+- **Postava svobodná** → její příspěvky jdou **na její osobní účet**.
+- **Výjimka:** otázka může nést příznak **`Soukrome`**. Její dopady pak jdou **vždy na osobní účet**, i když je postava vdaná. Na to se zapisují příjmy, o kterých partner neví, nebo které si postava vědomě nechává stranou.
+
+Autor hry tedy zapisuje dopad **logickým jménem škály bez přípony**:
+
+```
+S_Marie_Wealth+3
+```
+
+Engine při přepočtu rozhodne, jestli to přistane na `Wealth_osobni`, nebo `Wealth_spolecny`. **Autor nemusí psát dvě varianty odpovědi pro vdanou a svobodnou postavu** — a přesně kvůli tomu tenhle mechanismus existuje. Bez něj by u každé finanční otázky musela být podmínka na rodinný stav.
+
+Explicitní zápis s příponou (`S_Marie_Wealth_osobni+3`) zůstává **možný a má přednost** před směrováním. Je to úniková cesta pro případy, které do pravidla nezapadají.
+
+**Stejné směrování platí i v podmínkách.** `S_Marie_Wealth >= 7` znamená „účet, do kterého Mariiny peníze tečou". Kdo chce konkrétní účet, napíše `S_Marie_Wealth_osobni >= 7`.
+
+**Výjimka — absolutní nastavení musí být vždy explicitní.** Organizátorská otázka typu `scale_direct` (§6.7) nesmí používat logické jméno. Org nastavuje konkrétní účet a nikdy se nesmí stát, že se hodnota nevědomky zapíše jinam, než myslel. Validace to hlídá.
+
+#### Kdy se rodinný stav vyhodnocuje
+
+Směrování se řídí stavem postavy **po strukturální fázi přepočtu** (§7.3, fáze 3), tedy po vyhodnocení sňatků a rozvodů dané kapitoly.
+
+Prakticky to znamená: **kdo se v téhle kapitole oženil, tomu už příspěvky z téže kapitoly jdou na společný účet.** Kdo se rozvedl, tomu jdou na osobní. Je to logičtější než počítat s loňským stavem a zároveň to plyne z fixního pořadí fází — nemůže to záviset na pořadí řádků v tabulce.
 
 #### Jak se sdílená hodnota mění
 
-Výchozí chování: **efekty od jednotlivých členů se sčítají.** Když Marie i Mirek odpoví tak, že každý přinese +2 na `Wealth`, společný účet vzroste o 4. Oba do něj vydělávají, takže je to správně.
+Výchozí chování: **příspěvky členů domácnosti se sčítají.** Když Marie i Mirek odpoví tak, že každý přinese +2 na `Wealth`, společný účet vzroste o 4. Oba do něj vydělávají, takže je to správně.
 
 Pravidlo ale může nést příznak **„aplikovat jednou za domácnost"** pro události, které postihnou domácnost jako celek (vykradli vás, dostali jste byt). Bez toho by se taková událost započítala tolikrát, kolik má domácnost členů.
 
 #### Vznik a zánik domácnosti
 
-Obojí je **efekt pravidla**, ne ruční operace.
+Obojí je **efekt odpovědi** (§6.7), ne ruční operace nad databází.
 
-- **Sňatek → sloučení.** Výchozí strategie je **součet hodnot s ořezáním na 10**; dvě pětky dají desítku, dvě dvojky čtyřku. Strategie je nastavitelná v definici škály (součet / průměr / vyšší z hodnot), protože pro různé škály dává smysl něco jiného.
-- **Rozvod nebo úmrtí → rozdělení.** Výchozí strategie: **každý si odnáší aktuální hodnotu domácnosti**. Rovněž nastavitelné.
-- Sloučení i rozdělení se zapisuje do trace a auditu s uvedením obou původních hodnot.
+- **Sňatek.** Vznikne domácnost. Osobní účty obou zůstávají, jak byly. **Kolik kdo vloží do společného, je otázka v dotazníku**, ne dopočítaná hodnota — hráči to sami rozehrávají a automatické „sečti a ořízni" by jim to rozhodnutí vzalo.
+- **Rozvod nebo úmrtí.** Domácnost zaniká. Co si kdo odnáší ze společného účtu, je **rovněž otázka nebo rozhodnutí orga**. Ne tiché dopočítání.
+- U nefinančních domácnostních škál (byt, auto) zůstává **nastavitelná strategie** v definici škály: součet, průměr, vyšší z hodnot, každý si odnáší.
+- Vznik i zánik se zapisuje do trace a auditu s uvedením původních hodnot.
 
-#### Soukromý i společný účet zároveň [ROZHODNUTO]
+#### Kontroly konzistence
 
-Manželé mohou mít **obojí** — vlastní peníze i společný účet. Model to zvládá bez jakéhokoli rozšíření: **jsou to dvě samostatné škály s různým rozsahem platnosti**, ne jedna škála přepínaná do sdíleného režimu.
-
-| Škála             | Rozsah      | Kdo ji vlastní                            |
-| ----------------- | ----------- | ----------------------------------------- |
-| `Wealth_osobni`   | `postava`   | Každá postava svou                        |
-| `Wealth_spolecny` | `domácnost` | Domácnost, čtou a mění ji všichni členové |
-
-Doporučená konvence pojmenování: přípona `_osobni` / `_spolecny`, aby se v tabulce nedaly splést.
-
-**Který účet efekt zasáhne, určuje ID škály v dopadu odpovědi.** `S_Marie_Wealth_osobni+3` a `S_Marie_Wealth_spolecny+3` jsou dva různé zápisy a autor hry mezi nimi volí vědomě. Engine nic nedomýšlí.
-
-**Převod mezi účty** je jeden efekt nad dvěma škálami: `Wealth_osobni−2, Wealth_spolecny+2`. Žádná zvláštní mašinérie.
-
-**Vznik společného účtu při sňatku se nepočítá automaticky.** Kolik kdo do společného vložil, je **otázka v dotazníku**, ne dopočítaná hodnota — hráči to sami rozehrávají a strategie „součet a ořízni" by jim to vzala. Automatické sloučení (§4.4 výše) zůstává použitelné pro škály, kde dává smysl, ale u peněz se nepoužije.
-
-**Rozdělení při rozvodu** platí totéž: buď otázka, nebo rozhodnutí orga. Ne tiché dopočítání.
-
-**Postava bez manželství** má společnou škálu technicky taky (domácnost o jednom členovi), ale v dokumentu se neobjeví — zobrazení řídí příznak `Spolecny_ucet` a blok v šabloně. Org v detailu postavy vidí obě hodnoty, u sdílené se značkou, s kým je sdílená.
-
-**Kontrola konzistence:** upozorni, když v kapitole žádná odpověď nesahá na jednu z dvojice účtů. Většinou to znamená, že autor omylem napsal všude stejné ID škály.
+- Směrovaná škála musí mít definované **obě** hodnoty, `_osobni` i `_spolecny`.
+- Absolutní nastavení (`scale_direct`) používající logické jméno bez přípony je **chyba**.
+- Upozorni, když v kapitole žádná odpověď nesahá na jeden z dvojice účtů — většinou to znamená překlep v ID škály.
 
 #### Dopad na transparentnost
 
-Sdílené škály jsou **největší riziko pro princip „žádný black box"** (§2). Mariiny peníze se změní, aniž by to šlo vysvětlit z jejích odpovědí.
+Sdílené škály jsou **největší riziko pro princip „žádný black box"** (§2). Mariiny peníze se změní, aniž by to šlo vysvětlit z jejích odpovědí. Směrování to riziko ještě zvyšuje, protože ze zápisu `S_Marie_Wealth+3` není na první pohled vidět, kam to spadlo.
 
 Proto:
 
-1. Trace u sdílené škály **vždy uvádí, od koho změna přišla**: „−3 Wealth, zdroj: odpověď Mirka Pokorného na Q_Mirek2_1".
-2. V detailu postavy je u sdílené škály **viditelná značka** „společný účet s Mirkem Pokorným" a odkaz na druhou postavu.
-3. Dokument postavy může odkázat na sdílenou hodnotu běžnou proměnnou; z pohledu šablony není rozdíl.
+1. Trace u směrované škály **vždy uvádí cílový účet a důvod směrování**: „+3 Wealth → společný účet, Marie je v manželství s Mirkem Pokorným".
+2. Trace u sdílené škály **vždy uvádí, od koho změna přišla**: „−3 Wealth_spolecny, zdroj: odpověď Mirka Pokorného na Q_Mirek_2_1".
+3. V detailu postavy je u sdílené škály **viditelná značka** „společný účet s Mirkem Pokorným" a odkaz na druhou postavu.
+4. Dokument postavy odkazuje na obě hodnoty běžnými proměnnými; z pohledu šablony není rozdíl. Zobrazení společného účtu u svobodné postavy řídí blok v šabloně.
 
 ---
 
 ### 4.5 Kde jsou pravidla [ROZHODNUTO]
 
-**Rozhodující zjištění z reálného listu `2_Content`:** autor hry už podmínky píše jako **výrazy v jedné buňce**, například `A_Marie1_1_Karel AND !(A_Marie_2_3_Postava2 OR A_Marie_2_3_Postava3)`. Dřívější návrh na rozepsání podmínek do strukturovaných sloupců v samostatném listu se tím **ruší** — autor hlasoval tím, jak tabulku píše, a rozepisovat tohle do řádků by bylo výrazně horší na psaní i na čtení.
+**Rozhodující zjištění z reálného listu `2_Content`:** autor hry už podmínky píše jako **výrazy v jedné buňce**, například `A_Marie_1_1_Karel AND !(A_Marie_2_3_Postava2 OR A_Marie_2_3_Postava3)`. Dřívější návrh na rozepsání podmínek do strukturovaných sloupců v samostatném listu se tím **ruší** — autor hlasoval tím, jak tabulku píše, a rozepisovat tohle do řádků by bylo výrazně horší na psaní i na čtení.
 
 **Podmínky jsou výrazy. Parser se nepíše, použije se knihovna** (`jsep` nebo `expr-eval`) a nad jejím stromem se napíše vlastní vyhodnocení. Vlastní gramatiku nepsat ani teď.
 
@@ -237,8 +260,8 @@ Proto:
 
 | Prvek   | Zápis                 | Význam                                               |
 | ------- | --------------------- | ---------------------------------------------------- |
-| Odpověď | `A_Marie1_1_Karel`    | Postava odpověděla takto                             |
-| Negace  | `!A_Marie1_1_Karel`   | Neodpověděla                                         |
+| Odpověď | `A_Marie_1_1_Karel`    | Postava odpověděla takto                             |
+| Negace  | `!A_Marie_1_1_Karel`   | Neodpověděla                                         |
 | Spojky  | `AND`, `OR`           | Logické spojení                                      |
 | Závorky | `( )`                 | Priorita vyhodnocení                                 |
 | Škála   | `S_Marie_Wealth >= 7` | Porovnání, operátory `=`, `!=`, `>`, `<`, `>=`, `<=` |
@@ -413,7 +436,7 @@ Neexistuje sdílená sada otázek. **Každá z 23 postav má vlastní ~3 otázky
 
 Důsledky pro implementaci:
 
-- Otázka je vždy navázaná na konkrétní postavu (viz konvence ID `Q_Marie1_1`).
+- Otázka je vždy navázaná na konkrétní postavu (viz konvence ID `Q_Marie_1_1`).
 - Volby odpovědí často odkazují na **jiné postavy** („Karel", „Mirek"). Musí odkazovat na **ID postavy z registru**, ne na volný text — jinak se po sňatku nebo přejmenování rozpadne provázání (§8.8).
 - Autorský objem je velký a ručně psaný → kontroly konzistence (§11) jsou o to důležitější.
 
@@ -452,11 +475,17 @@ Důsledky:
 - Zůstává jiná kontrola: **postava smí být cílem nejvýše jednoho sňatku v kapitole** a smí být nejvýše v jedné domácnosti (§4.4). Hlídá to validace (§11).
 - U provázané odpovědi je vidět, u které postavy byla zadaná.
 
+#### Příznak `Soukrome`
+
+Otázka může nést příznak **`Soukrome`**, kterým se její finanční dopady směřují **vždy na osobní účet**, i u vdané postavy (§4.4). Na to se zapisují příjmy, o kterých partner neví.
+
 #### Absolutní hodnota vs. posun [ROZHODNUTO]
 
 Organizátorská otázka typu `scale_direct` nastavuje hodnotu **absolutně**. Musí být jasné, co se stane, když na tutéž škálu míří i posuny z jiných odpovědí.
 
 **Pravidlo: absolutní nastavení se aplikuje na začátku hodnotové fáze, před všemi posuny.** Org zadá výchozí stav a delty se do něj promítnou. Každé absolutní nastavení je v trace zvlášť viditelné.
+
+**Absolutní nastavení musí vždy jmenovat konkrétní účet**, tedy `S_Marie_Wealth_osobni`, nikdy směrované `S_Marie_Wealth` (§4.4).
 
 #### Dopad na průběh kapitoly
 
@@ -510,7 +539,7 @@ Oboustranné potvrzení s hlášením nesouladu tím **odpadá** — nesoulad ne
 1. Sběr všech odpovědí
 2. Aplikace vyloučení (negací)
 3. **Strukturální efekty** — vznik a zánik domácností, sňatky, změny členství a vedení skupin. Podle priority sestupně.
-4. **Hodnotové efekty** — nejprve absolutní nastavení hodnot z organizátorských otázek (§6.7), pak změny škál a příznaků podle priority sestupně. U škál s rozsahem `domácnost` se efekty členů sčítají, pokud pravidlo nenese příznak „aplikovat jednou za domácnost" (§4.4).
+4. **Hodnotové efekty** — nejprve absolutní nastavení hodnot z organizátorských otázek (§6.7), pak změny škál a příznaků podle priority sestupně. **U směrovaných škál se tady rozhoduje cílový účet podle rodinného stavu z fáze 3** (§4.4). U škál s rozsahem `domácnost` se efekty členů sčítají, pokud pravidlo nenese příznak „aplikovat jednou za domácnost“ (§4.4).
 5. Vyhodnocení pásem na škálách
 6. Detekce a nahlášení zbylých konfliktů
 
@@ -533,7 +562,7 @@ Tím je dohledatelnost splněná bez jakéhokoli seedování — v datech prost�
 
 Logika algoritmu musí být **human-readable**. Pravidla se v UI zobrazují v přirozeném jazyce, ne jako kód. Např.:
 
-> _„Protože Marie odpověděla ‚Karel' na Q_Marie1_1 (+3 Wealth) a je členkou Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."_
+> _„Protože Marie odpověděla ‚Karel' na Q_Marie_1_1 (+3 Wealth) a je členkou Srdce party (−2 Regime), její Wealth vzrostl z 4 na 7 → pásmo ‚Zajištěná'."_
 
 ---
 

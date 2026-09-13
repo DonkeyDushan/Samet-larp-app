@@ -9,7 +9,7 @@ import type { CharacterId, GroupId, HouseholdId, RuleId } from './ids'
 export interface TraceContribution {
   sourceKind: 'odpoved' | 'pravidlo' | 'hod' | 'pocatecni' | 'rucni'
   sourceId: string
-  /** Readable source description, e.g. the answer `Karel` to `Q_Marie1_1`. */
+  /** Readable source description, e.g. the answer `Karel` to `Q_Marie_1_1`. */
   label: string
   /**
    * Which character the contribution came from. Required on shared scales

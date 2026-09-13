@@ -23,7 +23,6 @@ potvrzují.
 | §7.1 a §15 | podmínky pravidel se zapisují strukturovaně do listu `N_Conditions` | **§4.5:** podmínky jsou **výrazy v jedné buňce**, parsuje je knihovna |
 | §15 | „nepiš parser, začni strukturovanými sloupci" | **§4.5:** ten návrh je výslovně **zrušen** — autor hlasoval tím, jak tabulku píše |
 | §10.3 | šablony se nahrávají „jednou za kapitolu" | **§6.5:** celý běh včetně šablon všech tří kapitol je připravený a nahraný **předem** |
-| §4.2 | ID otázky `Q_<Postava><Kapitola>_<Poradi>` (`Q_Marie1_1`) | **Fixtures:** `Q_<Postava>_<Kapitola>_<Poradi>` (`Q_Marie_1_1`), stejně jako u odpovědí |
 
 §8.2 i §4.5 ten obrat samy pojmenovávají („Upraveno podle reálného listu
 `2_Content`", „Dřívější návrh … se tím ruší"). Když na některé z těch míst
@@ -293,7 +292,7 @@ téhož bloku se **stejnou prioritou** jsou chyba (výsledek by závisel na poř
 - **Sdílené škály jsou největší riziko pro princip „žádný black box".**
   Mariiny peníze se změní kvůli Mirkově odpovědi. Proto `TraceContribution`
   u sdílené škály **vždy nese `characterId` zdroje** a UI musí říct
-  „−3 Wealth, zdroj: odpověď Mirka Pokorného na Q_Mirek2_1". V detailu postavy
+  „−3 Wealth, zdroj: odpověď Mirka Pokorného na Q_Mirek_2_1". V detailu postavy
   je u sdílené škály značka „společný účet s Mirkem Pokorným" a odkaz na druhou
   postavu. Bez toho je to přesně ten black box, který §2 zakazuje.
 
