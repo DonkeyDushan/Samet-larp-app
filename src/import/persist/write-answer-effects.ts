@@ -7,7 +7,7 @@
  */
 import type { RunScope } from '@/db'
 import { effects } from '@/db/schema'
-import type { STRUCTURAL_EFFECT_KINDS } from '@/engine'
+import { ANSWER_EFFECT_KINDS } from '../constants/answer-effect-kinds'
 import type { ParsedConfig } from '../types/parsed-config'
 import type { ParsedAnswerOption } from '../types/parsed-question'
 import type { EntityIds, IdMap } from './entity-ids'
@@ -15,14 +15,6 @@ import type { WrittenRows } from './written-rows'
 
 type EffectRow = typeof effects.$inferInsert
 type EffectPayload = Omit<EffectRow, 'runId' | 'externalId' | 'ordinal' | 'answerOptionId'>
-
-/** Sheet effect names (`SNATEK(Mirek)`) to engine effect kinds. */
-const STRUCTURAL_EFFECTS: Readonly<Record<string, (typeof STRUCTURAL_EFFECT_KINDS)[number]>> = Object.freeze({
-  SNATEK: 'domacnost_slouceni',
-  ROZVOD: 'domacnost_rozdeleni',
-  VEDENI: 'vedeni',
-  CLENSTVI: 'clenstvi',
-})
 
 export const writeAnswerEffects = async (
   scope: RunScope,
@@ -88,7 +80,7 @@ const effectPayloads = (option: ParsedAnswerOption, refs: EntityIds): EffectPayl
   }
 
   for (const effect of option.effects) {
-    const kind = STRUCTURAL_EFFECTS[effect.name]
+    const kind = ANSWER_EFFECT_KINDS[effect.name]
     // §7.3: the partner comes from whoever the chosen option names, so the
     // author does not write a rule per pair of 23 characters.
     if (kind) payloads.push({ kind, relatedFromAnswer: true })

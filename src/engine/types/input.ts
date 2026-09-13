@@ -1,32 +1,38 @@
-/** Recorded answers and rolls — the second argument of `evaluate`. */
-import type { AnswerOptionId, CharacterId, QuestionId, RuleId } from './ids'
+/** Second argument of `evaluate`: the recorded answers and rolls. */
+import type { AnswerOptionId, ChapterNumber, CharacterId, QuestionId, RuleId, VariationId } from './ids'
 
 /**
- * A recorded answer. An answer absent from the list counts as missing — the
- * engine fills in nothing and the computation must not finish (§6.3).
+ * A recorded answer. There are no default answers (§6.3): a question of the
+ * computed chapter without one stops the computation.
  */
 export interface AnswerInput {
   questionId: QuestionId
-  characterId: CharacterId
-  boolValue?: boolean
+  /**
+   * `bool` and `single` exactly one option, `multi` any number. `scale_direct`
+   * and `text` select nothing — all their options apply implicitly.
+   */
+  selectedOptionIds: AnswerOptionId[]
+  /** Required by `scale_direct`. */
   numericValue?: number
   textValue?: string
-  selectedOptionIds?: AnswerOptionId[]
   filledByOrg: boolean
 }
 
 /**
- * An already rolled die. The engine never rolls (§7.4); a missing roll blocks
- * the computation the same way a missing answer does.
+ * A stored roll (§7.4), 1–100. The engine never rolls: it reads these and lists
+ * the ones it still needs.
  */
-export interface DiceInput {
-  ruleId: RuleId
+export interface RollInput {
+  ownerKind: 'varianta' | 'pravidlo'
+  ownerId: VariationId | RuleId
   characterId: CharacterId
-  sides: number
   value: number
 }
 
 export interface EvaluationInputs {
+  chapter: ChapterNumber
+  /** Every chapter up to and including `chapter`. */
   answers: AnswerInput[]
-  dice: DiceInput[]
+  /** Rolls of `chapter` only. */
+  rolls: RollInput[]
 }

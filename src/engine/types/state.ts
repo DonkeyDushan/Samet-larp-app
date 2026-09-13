@@ -1,46 +1,39 @@
-/** Run state at the start of a chapter — the first argument of `evaluate`. */
-import type { BandId, ChapterNumber, CharacterId, FlagId, GroupId, HouseholdId, ScaleId } from './ids'
-
-export interface Membership {
-  groupId: GroupId
-  role: 'clen' | 'vedouci'
-}
+/** Run state after a chapter — the first argument and the main output of `evaluate`. */
+import type { ChapterNumber, CharacterId, FlagId, GroupId, HouseholdId, ScaleKey } from './ids'
 
 export interface CharacterState {
   characterId: CharacterId
-  /** `postava`-scoped values only; shared ones live in `HouseholdState` (§4.4). */
-  scales: Record<ScaleId, number>
-  /** Derived from the value; kept for outputs and conditions. */
-  bands: Record<ScaleId, BandId>
-  flags: Record<FlagId, boolean>
-  memberships: Membership[]
   /**
    * Always set — a single character is a household of one, so the engine has
    * no "no household" branch (§4.4).
    */
   householdId: HouseholdId
-  /** Template variables: `{PRIJMENI}`, `{VEK}`, … (§8.8). */
-  variables: Record<string, string>
+  /** `postava` scales only; shared values live in the household (§4.4). */
+  scales: Record<ScaleKey, number>
+  /** Band ordinal per scale, derived from the value in phase 5. */
+  bands: Record<ScaleKey, number>
+  /** A flag once cleared stays `false`, so the trace can explain it. */
+  flags: Record<FlagId, boolean>
 }
 
 /** Owner of shared values (§4.4). */
 export interface HouseholdState {
   householdId: HouseholdId
   memberIds: CharacterId[]
-  scales: Record<ScaleId, number>
-  bands: Record<ScaleId, BandId>
+  scales: Record<ScaleKey, number>
+  bands: Record<ScaleKey, number>
 }
 
 export interface GroupState {
   groupId: GroupId
-  leaderId?: CharacterId
   memberIds: CharacterId[]
+  leaderId?: CharacterId
 }
 
 export interface RunState {
-  runId: string
-  chapter: ChapterNumber
+  /** 0 is the initial state from config; `evaluate` computes the chapter after this one. */
+  completedChapter: 0 | ChapterNumber
   characters: Record<CharacterId, CharacterState>
-  groups: Record<GroupId, GroupState>
   households: Record<HouseholdId, HouseholdState>
+  groups: Record<GroupId, GroupState>
 }

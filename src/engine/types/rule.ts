@@ -1,92 +1,28 @@
-/** Rules and the rule set passed to `evaluate` (§7.1). */
-import type { CharacterDefinition, GroupDefinition } from './character'
-import type { Effect } from './effect'
-import type {
-  AnswerOptionId,
-  BandId,
-  ChapterNumber,
-  CharacterId,
-  FlagId,
-  GroupId,
-  QuestionId,
-  RuleId,
-  ScaleId,
-} from './ids'
-import type { QuestionDefinition } from './question'
-import type { FlagDefinition, ScaleDefinition } from './scale'
+/** Layer 4 rules from the optional `N_Rules` sheet (§4.5, §7.1). */
+import type { EffectDefinition } from './effect'
+import type { ChapterNumber, CharacterId, RuleId } from './ids'
 
 /**
- * One condition, always structured and never parsed from text (§15).
- * An empty `characterId` means "the character currently being evaluated".
- */
-export interface RuleCondition {
-  /** Groups are always joined by `OR`. */
-  groupIndex: number
-  position: number
-  /** Joins this condition to the previous one in the group; ignored on the first. */
-  connector: 'AND' | 'OR'
-  negate: boolean
-
-  subject: 'odpoved' | 'skala' | 'pasmo' | 'priznak' | 'clenstvi' | 'vedeni' | 'hod'
-  operator:
-    | 'eq'
-    | 'neq'
-    | 'gt'
-    | 'gte'
-    | 'lt'
-    | 'lte'
-    | 'in'
-    | 'not_in'
-    | 'obsahuje'
-    | 'je_pravda'
-    | 'je_nepravda'
-
-  characterId?: CharacterId
-  questionId?: QuestionId
-  answerOptionId?: AnswerOptionId
-  scaleId?: ScaleId
-  bandId?: BandId
-  flagId?: FlagId
-  groupId?: GroupId
-
-  valueText?: string
-  valueNumber?: number
-  valueBool?: boolean
-  valueList?: string[]
-}
-
-/**
- * `CONDITION → EFFECT [priority, weight]`.
+ * `CONDITION → EFFECT [priority]`.
  *
- * `isExclusion` marks a rule that prevents an outcome. Exclusions always win
- * over assignment and are applied before any effects.
+ * The condition is read against the state at the start of the chapter plus this
+ * chapter's answers: reading values the same chapter is still changing would
+ * make the result depend on evaluation order.
  */
 export interface Rule {
   id: RuleId
-  externalId: string
-  name: string
-  description?: string
-  /** NULL in data means the rule applies in every chapter. */
+  /** Absent means every chapter. */
   chapter?: ChapterNumber
+  /**
+   * Absent means the rule is evaluated for every character in turn; that
+   * character owns unqualified flags and is the default effect target.
+   */
+  characterId?: CharacterId
   priority: number
-  weight: number
+  condition: string
+  /** The rule prevents the outcomes in `effects`; exclusion always wins over assignment (§7.3). */
   isExclusion: boolean
-  isEnabled: boolean
-  /** Without this flag, member effects on a shared scale add up (§4.4). */
+  /** Without it, member effects on a shared scale add up (§4.4). */
   appliesOncePerHousehold: boolean
-  /** Rule requires a dice roll with this many sides (§7.4). */
-  diceSides?: number
-  conditions: RuleCondition[]
-  effects: Effect[]
-}
-
-/** Third argument of `evaluate`: rules plus everything needed to read them. */
-export interface RuleSet {
-  chapter: ChapterNumber
-  rules: Rule[]
-  scales: ScaleDefinition[]
-  flags: FlagDefinition[]
-  groups: GroupDefinition[]
-  characters: CharacterDefinition[]
-  questions: QuestionDefinition[]
+  effects: EffectDefinition[]
 }

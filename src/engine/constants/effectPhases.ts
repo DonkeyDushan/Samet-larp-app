@@ -3,7 +3,7 @@
  * around it — the phase order is an invariant, not a detail (§7.3).
  */
 
-/** Effects of the structural phase; must all be applied before any value effect. */
+/** Effects of the structural phase; all of them run before any value effect. */
 export const STRUCTURAL_EFFECT_KINDS = Object.freeze([
   'domacnost_slouceni',
   'domacnost_rozdeleni',
@@ -15,11 +15,9 @@ export const STRUCTURAL_EFFECT_KINDS = Object.freeze([
 export const VALUE_EFFECT_KINDS = Object.freeze([
   'nastaveni_skaly',
   'zmena_skaly',
-  'pasmo',
   'priznak',
-  'blok',
-  'tag',
 ] as const)
 
 export type StructuralEffectKind = (typeof STRUCTURAL_EFFECT_KINDS)[number]
 export type ValueEffectKind = (typeof VALUE_EFFECT_KINDS)[number]
+export type EffectKind = StructuralEffectKind | ValueEffectKind

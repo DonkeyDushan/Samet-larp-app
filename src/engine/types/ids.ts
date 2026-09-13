@@ -1,14 +1,13 @@
 /**
- * Identifiers the engine works with (§7).
- *
- * All plain strings: the engine is a pure function and must not depend on how
- * the database spells a primary key (architecture rule 1).
+ * Identifiers the engine works with — always the author's IDs from the sheet
+ * (`Marie`, `Q_Marie_2_1`, `Wealth_osobni`), never database keys: conditions
+ * name them, and the trace has to stay readable without a lookup.
  */
 
 export type CharacterId = string
 export type GroupId = string
-export type ScaleId = string
-export type BandId = string
+/** Scale key without the character part, e.g. `Wealth_osobni`. */
+export type ScaleKey = string
 export type FlagId = string
 export type HouseholdId = string
 export type QuestionId = string
@@ -16,6 +15,7 @@ export type AnswerOptionId = string
 export type RuleId = string
 /** Template block `{BLOK <ID>}` (§8.4). */
 export type BlockId = string
+export type VariationId = string
 
 export type ChapterNumber = (typeof CHAPTER_NUMBERS)[number]
 

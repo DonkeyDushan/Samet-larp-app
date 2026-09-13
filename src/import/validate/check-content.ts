@@ -1,4 +1,4 @@
-import { DEFAULT_CONDITION } from '../expression'
+import { DEFAULT_CONDITION } from '@/engine'
 import type { IssueCollector } from '../issue-collector'
 import type { ParsedBlock, ParsedVariation } from '../types/parsed-block'
 import type { ParsedConfig } from '../types/parsed-config'

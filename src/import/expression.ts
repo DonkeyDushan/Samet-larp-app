@@ -1,23 +1,24 @@
 /**
  * Conditions from the `Conditions` column (§4.5, §8.2).
  *
- * The author writes them as expressions in one cell, so the parser is a library
- * (`jsep`) and never a hand-written grammar. This session only reads, stores
- * and syntax-checks them — evaluation is the engine's job (§7), and the tree
- * produced here is what it will walk.
+ * The author writes them as expressions in one cell. The import only reads,
+ * stores and syntax-checks them, in words the author understands; the language
+ * itself and its evaluation belong to the engine (§7), so both parse the same way.
  *
  * Language (§4.5): identifiers `A_…` answer, `S_…` scale, `F_…` flag,
  * `AND` / `OR`, `!`, parentheses, comparisons, `RANDOM(50)` and `DEFAULT`.
  */
-import jsep from 'jsep'
-
-// `AND` binds tighter than `OR`, matching how the author reads the sheet.
-// Registered once at module load; jsep keeps operators globally.
-jsep.addBinaryOp('AND', 2)
-jsep.addBinaryOp('OR', 1)
-
-/** Always-true fallback variant (§8.2); it stands last and is not an expression. */
-export const DEFAULT_CONDITION = 'DEFAULT'
+import type jsep from 'jsep'
+import {
+  ANSWER_PREFIX,
+  DEFAULT_CONDITION,
+  FLAG_PREFIX,
+  parseExpressionTree,
+  RANDOM_FUNCTION,
+  RANDOM_MAX_PERCENT,
+  RANDOM_MIN_PERCENT,
+  SCALE_PREFIX,
+} from '@/engine'
 
 export type ReferenceKind = 'odpoved' | 'skala' | 'priznak' | 'neznamy'
 
@@ -44,28 +45,12 @@ export interface ExpressionParse {
 
 /** ID prefixes from §4.2; anything else is reported rather than guessed at. */
 const classify = (name: string): ReferenceKind => {
-  if (name.startsWith('A_')) return 'odpoved'
-  if (name.startsWith('S_')) return 'skala'
-  if (name.startsWith('F_')) return 'priznak'
+  if (name.startsWith(ANSWER_PREFIX)) return 'odpoved'
+  if (name.startsWith(SCALE_PREFIX)) return 'skala'
+  if (name.startsWith(FLAG_PREFIX)) return 'priznak'
 
   return 'neznamy'
 }
-
-/**
- * `=` is the author's equality operator (§4.5) but jsep only knows `==`.
- * Rewrites a lone `=` and leaves `<=`, `>=`, `!=` and `==` alone.
- */
-const normalizeEquals = (source: string): string => {
-  return source.replace(/(^|[^<>=!])=(?!=)/g, '$1==')
-}
-
-/** The only function a condition may call (§4.5). */
-const CALL_WHITELIST = Object.freeze(new Set(['RANDOM']))
-
-/** `RANDOM(n)` takes a probability in percent. */
-const RANDOM_MIN_PERCENT = 0
-
-const RANDOM_MAX_PERCENT = 100
 
 export const parseCondition = (cell: string | undefined | null): ExpressionParse => {
   const raw = (cell ?? '').trim()
@@ -87,7 +72,7 @@ export const parseCondition = (cell: string | undefined | null): ExpressionParse
 
   let tree: jsep.Expression
   try {
-    tree = jsep(normalizeEquals(raw))
+    tree = parseExpressionTree(raw)
   } catch (cause) {
     return {
       raw,
@@ -125,7 +110,7 @@ export const parseCondition = (cell: string | undefined | null): ExpressionParse
       case 'CallExpression': {
         const call = node as jsep.CallExpression
         const callee = call.callee.type === 'Identifier' ? String((call.callee as jsep.Identifier).name) : '?'
-        if (!CALL_WHITELIST.has(callee)) {
+        if (callee !== RANDOM_FUNCTION) {
           error ??= `neznámá funkce \`${callee}\` — k dispozici je jen \`RANDOM(<procenta>)\``
 
           return

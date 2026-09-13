@@ -11,14 +11,23 @@ const config = [
     ignores: ['.next/**', 'node_modules/**', 'drizzle/**', 'next-env.d.ts'],
   },
   {
-    // Architecture rule 1: the engine is a pure function, independent of app/ and db/.
+    // Architecture rule 1: the engine is a pure function, independent of every other layer.
     files: ['src/engine/**/*.ts'],
+    // Tests may load the fixture workbook through the import.
+    ignores: ['src/engine/**/*.test.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
-            { group: ['@/app/*', '@/db/*', 'next/*', 'react', 'react-dom', 'drizzle-orm', 'postgres'], message: 'src/engine musí zůstat čistý: bez DB, sítě a Reactu (pravidlo 1 v CLAUDE.md).' },
+            {
+              group: [
+                '@/app', '@/app/*', '@/db', '@/db/*', '@/import', '@/import/*', '@/features', '@/features/*',
+                '@/core', '@/core/*', '@/components', '@/components/*', '@/testing', '@/testing/*',
+                'next', 'next/*', 'react', 'react-dom', 'drizzle-orm', 'postgres', 'xlsx',
+              ],
+              message: 'src/engine musí zůstat čistý: bez DB, sítě, Reactu a ostatních vrstev aplikace (pravidlo 1 v CLAUDE.md).',
+            },
           ],
         },
       ],
